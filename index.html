@@ -1,2125 +1,1423 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-[#F9F9F7]">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadence — Leadership & Training Cockpit</title>
+  <title>Cadence — Executive & Dealership Cockpit</title>
   
-  <!-- Typography: Inter & Plus Jakarta Sans -->
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Firebase SDKs (Compat version for zero-build browser hosting) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <!-- Auto-provisioned Firebase Config when hosted on Firebase -->
-  <script src="/__/firebase/init.js" onerror="console.info('Running outside Firebase Hosting or local preview')"></script>
-
+  <!-- Tailwind Configuration matching Scandinavian / Apple Aesthetic -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-            brand: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-          },
           colors: {
-            bone: {
-              50: '#FCFCFB',
-              100: '#F9F9F7',
-              150: '#F4F4F0',
-              200: '#EFEFEA',
-              300: '#E4E4DC',
-            },
-            charcoal: {
-              700: '#383C42',
-              800: '#22252A',
-              900: '#111315',
-            },
-            nordic: {
-              slate: '#5F656B',
-              muted: '#8B929A',
+            cadence: {
+              canvas: '#F9F9F7',
+              surface: '#FFFFFF',
+              charcoal: '#121417',
+              slate: '#5A6068',
               border: 'rgba(28, 32, 40, 0.08)',
-              borderFocus: 'rgba(28, 32, 40, 0.25)',
-              blue: '#1E3A8A',
-              accent: '#2563EB',
+              sand: '#EFECE6',
+              sandLight: '#F5F3EF',
+              accent: '#183884',
+              accentHover: '#132C69',
+              green: '#2A7E4F',
+              amber: '#B87214'
             }
           },
-          letterSpacing: {
-            brand: '0.14em',
-            subtle: '0.04em',
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
           },
-          boxShadow: {
-            subtle: '0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02)',
-            card: '0 2px 8px -2px rgba(17, 19, 21, 0.04), 0 1px 3px 0 rgba(17, 19, 21, 0.02)',
-            floating: '0 14px 34px -6px rgba(17, 19, 21, 0.08), 0 4px 12px -2px rgba(17, 19, 21, 0.03)',
+          letterSpacing: {
+            brand: '0.18em',
           }
         }
       }
-    };
+    }
   </script>
 
   <style>
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 999px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
-    .glass-nav {
-      background: rgba(249, 249, 247, 0.92);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-    }
+    body { background-color: #F9F9F7; color: #121417; -webkit-font-smoothing: antialiased; }
+    .glass-nav { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 9999px; }
   </style>
-</head>
 
-<body class="h-full text-charcoal-900 font-sans antialiased flex flex-col bg-[#F9F9F7] selection:bg-charcoal-900 selection:text-white">
+  <!-- Firebase SDKs (Modular ES) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      onAuthStateChanged, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    // Your Registered Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDO7M9IKoCfAtZnOstkxBk531feNX91FKE",
+      authDomain: "cadence-app-fbf18.firebaseapp.com",
+      projectId: "cadence-app-fbf18",
+      storageBucket: "cadence-app-fbf18.firebasestorage.app",
+      messagingSenderId: "195971259427",
+      appId: "1:195971259427:web:e33be57697a69ae3992596",
+      measurementId: "G-RYNVMGSDEQ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // Default template state for brand new users
+    const defaultData = {
+      locations: [
+        { id: "loc-1", name: "Flagship Dealership", type: "OEM Dealership" },
+        { id: "loc-2", name: "Pre-Owned Showcase", type: "Used Car Dealership" },
+        { id: "loc-3", name: "Service & Care Facility", type: "Service Centre" }
+      ],
+      employees: [
+        { id: "emp-1", name: "Jordan Brooks", role: "Sales Specialist", locId: "loc-1", goal: "Master vehicle consultation cadence & transparency presentation." }
+      ],
+      visitPlans: {
+        "emp-1": [
+          { id: "vp-1", text: "Observe customer vehicle walkaround & discovery questions", done: false, type: "Observation Drill" }
+        ]
+      },
+      tasks: [
+        { id: "t-1", text: "Configure facility coaching standards & audit checklist", stage: "in-flight", tag: "Operations" },
+        { id: "t-2", text: "Plan monthly dealership team performance cadence", stage: "next", tag: "Strategy" }
+      ],
+      geminiApiKey: ""
+    };
 
-  <!-- AUTH SCREEN (Shown if user is logged out) -->
-  <div id="auth-gate" class="fixed inset-0 z-50 bg-[#F9F9F7] flex flex-col items-center justify-center p-6 text-center">
-    <div class="max-w-md w-full p-8 rounded-3xl bg-white border border-nordic-border shadow-floating space-y-6">
-      
-      <!-- Brand Logo -->
-      <div class="flex flex-col items-center gap-3">
-        <svg class="w-12 h-12 text-charcoal-900" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M 68 25 L 34 25 C 22.95 25 14 33.95 14 45 C 14 56.05 22.95 65 34 65 L 68 65" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
-          <path d="M 34 45 L 68 45 L 68 22" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M 56 34 L 68 22 L 80 34" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div>
-          <h1 class="font-brand font-bold text-lg tracking-brand uppercase text-charcoal-900">CADENCE</h1>
-          <p class="text-xs text-nordic-slate mt-1">Leadership, Training & Pipeline Cockpit</p>
-        </div>
-      </div>
-
-      <div class="space-y-2 text-xs text-nordic-slate border-t border-b border-nordic-border py-4">
-        <p class="text-charcoal-900 font-medium">Scandinavian precision for personal executive rhythm.</p>
-        <p>Sign in with your Google account to initialize your personal stores, staff rosters, and working pipeline.</p>
-      </div>
-
-      <!-- Google Sign In Button -->
-      <button onclick="signInWithGoogle()" id="btn-login-google" class="w-full py-3 px-4 rounded-xl bg-charcoal-900 hover:bg-charcoal-800 text-white text-xs font-semibold flex items-center justify-center gap-3 transition-all shadow-subtle group">
-        <svg class="w-4 h-4" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        <span>Continue with Google</span>
-      </button>
-
-      <p class="text-[10px] text-nordic-muted">Data is securely stored in your personal Google Firebase Cloud Firestore.</p>
-    </div>
-  </div>
-
-  <!-- TOP HEADER (Only visible after login) -->
-  <header id="main-header" class="hidden sticky top-0 z-40 glass-nav border-b border-nordic-border px-4 lg:px-7 py-3 transition-all">
-    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
-      
-      <!-- Brand & Mark -->
-      <div class="flex items-center gap-6">
-        <div class="flex items-center gap-2.5 cursor-pointer select-none" onclick="switchView('dashboard')">
-          <svg class="w-7 h-7 text-charcoal-900" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 68 25 L 34 25 C 22.95 25 14 33.95 14 45 C 14 56.05 22.95 65 34 65 L 68 65" stroke="currentColor" stroke-width="8.5" stroke-linecap="round"/>
-            <path d="M 34 45 L 68 45 L 68 22" stroke="currentColor" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M 56 34 L 68 22 L 80 34" stroke="currentColor" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="font-brand font-bold text-sm tracking-brand uppercase text-charcoal-900">CADENCE</span>
-        </div>
-
-        <!-- Navigation Tabs -->
-        <nav class="hidden md:flex items-center gap-1 text-xs font-medium text-nordic-slate">
-          <button onclick="switchView('dashboard')" id="tab-dashboard" class="px-3 py-1.5 rounded-lg transition-colors bg-white text-charcoal-900 shadow-subtle border border-nordic-border">
-            Overview
-          </button>
-          <button onclick="switchView('pipeline')" id="tab-pipeline" class="px-3 py-1.5 rounded-lg transition-colors hover:text-charcoal-900 hover:bg-bone-150">
-            Pipeline
-          </button>
-          <button onclick="switchView('coaching')" id="tab-coaching" class="px-3 py-1.5 rounded-lg transition-colors hover:text-charcoal-900 hover:bg-bone-150">
-            Coaching & Roster
-          </button>
-          <button onclick="switchView('workspace')" id="tab-workspace" class="px-3 py-1.5 rounded-lg transition-colors hover:text-charcoal-900 hover:bg-bone-150">
-            Workspace Feed
-          </button>
-          <button onclick="switchView('templates')" id="tab-templates" class="px-3 py-1.5 rounded-lg transition-colors hover:text-charcoal-900 hover:bg-bone-150">
-            Templates
-          </button>
-        </nav>
-      </div>
-
-      <div class="flex items-center gap-2.5">
-        <!-- Quick Search -->
-        <button onclick="openCommandPalette()" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bone-150/80 hover:bg-bone-200 border border-nordic-border text-xs text-nordic-slate transition-colors">
-          <i data-lucide="search" class="w-3.5 h-3.5"></i>
-          <span>Search...</span>
-          <kbd class="ml-1.5 px-1.5 py-0.5 rounded bg-white border border-nordic-border text-[10px] font-mono text-nordic-muted">⌘K</kbd>
-        </button>
-
-        <!-- Gemini AI Copilot Trigger -->
-        <button onclick="toggleCopilot()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-900 hover:bg-charcoal-800 text-white text-xs font-medium transition-all shadow-subtle">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
-          <span class="hidden sm:inline">Ask Gemini</span>
-        </button>
-
-        <!-- User Profile & Settings Menu -->
-        <div class="flex items-center gap-2 pl-2 border-l border-nordic-border">
-          <button onclick="openSettingsModal()" class="p-1.5 rounded-lg hover:bg-bone-200 text-nordic-slate hover:text-charcoal-900 transition-colors" title="Settings & Gemini API Key">
-            <i data-lucide="settings" class="w-4 h-4"></i>
-          </button>
-
-          <div class="relative group">
-            <button class="flex items-center gap-2 focus:outline-none">
-              <img id="user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" class="w-7 h-7 rounded-full object-cover border border-nordic-border" alt="User Avatar" />
-            </button>
-            <div class="absolute right-0 mt-2 w-48 py-2 bg-white rounded-xl border border-nordic-border shadow-floating hidden group-hover:block transition-all z-50">
-              <div class="px-3 py-1.5 border-b border-nordic-border">
-                <p id="user-display-name" class="text-xs font-semibold text-charcoal-900 truncate">Authenticated User</p>
-                <p id="user-email-text" class="text-[10px] text-nordic-slate truncate">user@gmail.com</p>
-              </div>
-              <button onclick="openSettingsModal()" class="w-full text-left px-3 py-1.5 text-xs text-nordic-slate hover:text-charcoal-900 hover:bg-bone-100 flex items-center gap-2">
-                <i data-lucide="key" class="w-3.5 h-3.5"></i> Set Gemini API Key
-              </button>
-              <button onclick="signOutGoogle()" class="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2">
-                <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </header>
-
-  <!-- MAIN APP BODY -->
-  <main id="main-content" class="hidden flex-1 max-w-7xl w-full mx-auto p-4 lg:p-7 overflow-y-auto">
-
-    <!-- VIEW 0: EXECUTIVE DASHBOARD -->
-    <section id="view-dashboard" class="space-y-6">
-      
-      <!-- Welcome Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-nordic-border">
-        <div>
-          <div class="flex items-center gap-2 mb-0.5">
-            <span class="px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-mono text-[10px] tracking-wider uppercase font-semibold">Leadership Cockpit</span>
-            <span id="dash-date-label" class="text-xs text-nordic-muted">· Live Sync</span>
-          </div>
-          <h1 id="dash-greeting" class="text-2xl font-bold tracking-tight text-charcoal-900">Welcome</h1>
-          <p class="text-xs text-nordic-slate mt-0.5">Operational rhythm across your store locations, pipeline, and staff visits.</p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="openNewTaskModal()" class="px-3 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border text-xs font-medium text-charcoal-900 transition-colors flex items-center gap-1.5">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-            <span>New Task</span>
-          </button>
-          <button onclick="openNewCoachingModal()" class="px-3 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border text-xs font-medium text-charcoal-900 transition-colors flex items-center gap-1.5">
-            <i data-lucide="file-plus-2" class="w-3.5 h-3.5 text-amber-600"></i>
-            <span>Log Coaching</span>
-          </button>
-          <button onclick="toggleCopilot()" class="px-3.5 py-1.5 rounded-lg bg-charcoal-900 text-white text-xs font-medium hover:bg-charcoal-800 transition-all flex items-center gap-1.5 shadow-subtle">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
-            <span>Ask Gemini</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Executive KPI Pulse -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div onclick="switchView('pipeline')" class="p-4 rounded-2xl bg-white border border-nordic-border shadow-card hover:border-nordic-borderFocus cursor-pointer transition-all">
-          <div class="flex items-center justify-between text-nordic-muted">
-            <span class="text-[11px] font-semibold uppercase tracking-wider">Pipeline Flow</span>
-            <i data-lucide="kanban" class="w-4 h-4 text-nordic-slate"></i>
-          </div>
-          <div class="mt-2.5 flex items-baseline gap-2">
-            <span id="dash-stat-active-tasks" class="text-2xl font-bold text-charcoal-900 font-brand">0</span>
-            <span class="text-xs text-nordic-muted">active deliverables</span>
-          </div>
-          <p id="dash-stat-tasks-done" class="text-[11px] text-emerald-700 mt-1 flex items-center gap-1">
-            <i data-lucide="check" class="w-3 h-3"></i> 0 completed
-          </p>
-        </div>
-
-        <div onclick="switchView('coaching')" class="p-4 rounded-2xl bg-white border border-nordic-border shadow-card hover:border-nordic-borderFocus cursor-pointer transition-all">
-          <div class="flex items-center justify-between text-nordic-muted">
-            <span class="text-[11px] font-semibold uppercase tracking-wider">Store Facilities</span>
-            <i data-lucide="building-2" class="w-4 h-4 text-nordic-blue"></i>
-          </div>
-          <div class="mt-2.5 flex items-baseline gap-2">
-            <span id="dash-stat-locations-count" class="text-2xl font-bold text-charcoal-900 font-brand">0</span>
-            <span class="text-xs text-nordic-muted">locations</span>
-          </div>
-          <p id="dash-stat-store-summary" class="text-[11px] text-nordic-slate mt-1">Ready for setup</p>
-        </div>
-
-        <div onclick="switchView('coaching')" class="p-4 rounded-2xl bg-white border border-nordic-border shadow-card hover:border-nordic-borderFocus cursor-pointer transition-all">
-          <div class="flex items-center justify-between text-nordic-muted">
-            <span class="text-[11px] font-semibold uppercase tracking-wider">Roster Monitored</span>
-            <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i>
-          </div>
-          <div class="mt-2.5 flex items-baseline gap-2">
-            <span id="dash-stat-team-count" class="text-2xl font-bold text-charcoal-900 font-brand">0</span>
-            <span class="text-xs text-nordic-muted">staff members</span>
-          </div>
-          <p class="text-[11px] text-nordic-slate mt-1">Cross-store oversight</p>
-        </div>
-
-        <div onclick="switchView('workspace')" class="p-4 rounded-2xl bg-white border border-nordic-border shadow-card hover:border-nordic-borderFocus cursor-pointer transition-all">
-          <div class="flex items-center justify-between text-nordic-muted">
-            <span class="text-[11px] font-semibold uppercase tracking-wider">Cloud Sync</span>
-            <i data-lucide="cloud" class="w-4 h-4 text-emerald-600"></i>
-          </div>
-          <div class="mt-2.5 flex items-baseline gap-2">
-            <span class="text-2xl font-bold text-emerald-700 font-brand">Live</span>
-            <span class="text-xs text-nordic-muted">Firestore DB</span>
-          </div>
-          <p class="text-[11px] text-emerald-700 mt-1">Changes saved instantly</p>
-        </div>
-      </div>
-
-      <!-- Gemini Executive Briefing Card -->
-      <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-bone-100 via-bone-50 to-white border border-nordic-border shadow-subtle flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div class="flex items-start gap-3.5">
-          <div class="w-9 h-9 rounded-xl bg-charcoal-900 text-white flex items-center justify-center shrink-0 mt-0.5">
-            <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-xs font-bold text-charcoal-900 uppercase tracking-wider">Cadence AI Briefing</h3>
-              <span id="gemini-key-status" class="text-[10px] px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-medium">Ready</span>
-            </div>
-            <p id="dash-ai-summary" class="text-xs text-nordic-slate mt-1 max-w-3xl leading-relaxed">
-              Welcome to Cadence. To begin, register your dealership or service locations and add staff to your coaching roster. You can click "Ask Gemini" at any point to plan store visits or organize action items.
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button onclick="generateLiveGeminiBriefing()" class="px-3 py-1.5 rounded-lg bg-white border border-nordic-border text-charcoal-900 hover:border-charcoal-900 text-xs font-medium transition-colors flex items-center gap-1.5">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-            <span>Refresh Briefing</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Main Operational Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
-        <!-- Left: Immediate Working Focus & Store Locations -->
-        <div class="lg:col-span-7 space-y-5">
-          
-          <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3.5">
-            <div class="flex items-center justify-between border-b border-nordic-border pb-2.5">
-              <div class="flex items-center gap-2">
-                <i data-lucide="target" class="w-4 h-4 text-charcoal-900"></i>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-charcoal-900">Immediate Working Focus</h3>
-              </div>
-              <button onclick="switchView('pipeline')" class="text-xs font-medium text-nordic-blue hover:underline flex items-center gap-1">
-                <span>Open Pipeline</span>
-                <i data-lucide="arrow-right" class="w-3 h-3"></i>
-              </button>
-            </div>
-            <div id="dash-pipeline-focus" class="space-y-2"></div>
-          </div>
-
-          <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3.5">
-            <div class="flex items-center justify-between border-b border-nordic-border pb-2.5">
-              <div class="flex items-center gap-2">
-                <i data-lucide="building-2" class="w-4 h-4 text-nordic-slate"></i>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-charcoal-900">Store Locations</h3>
-              </div>
-              <button onclick="openNewLocationModal()" class="text-xs font-medium text-nordic-blue hover:underline flex items-center gap-1">
-                <i data-lucide="plus" class="w-3 h-3"></i> Add Location
-              </button>
-            </div>
-            <div id="dash-store-cards-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-          </div>
-
-        </div>
-
-        <!-- Right: Coaching Debriefs & Templates Quick Access -->
-        <div class="lg:col-span-5 space-y-5">
-          
-          <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3.5">
-            <div class="flex items-center justify-between border-b border-nordic-border pb-2.5">
-              <div class="flex items-center gap-2">
-                <i data-lucide="calendar" class="w-4 h-4 text-nordic-blue"></i>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-charcoal-900">Upcoming Visit Tasks</h3>
-              </div>
-              <button onclick="switchView('coaching')" class="text-xs font-medium text-nordic-blue hover:underline">Manage</button>
-            </div>
-
-            <div id="dash-visit-tasks-container" class="space-y-2 text-xs"></div>
-          </div>
-
-          <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3.5">
-            <div class="flex items-center justify-between border-b border-nordic-border pb-2.5">
-              <div class="flex items-center gap-2">
-                <i data-lucide="file-check-2" class="w-4 h-4 text-amber-600"></i>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-charcoal-900">Coaching Documentation Logs</h3>
-              </div>
-              <button onclick="openNewCoachingModal()" class="text-xs font-medium text-nordic-blue hover:underline">
-                + Log Record
-              </button>
-            </div>
-
-            <div id="dash-recent-docs-container" class="space-y-2 text-xs"></div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 1: WORKING PIPELINE -->
-    <section id="view-pipeline" class="hidden space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-nordic-border">
-        <div>
-          <h1 class="text-xl font-semibold tracking-tight text-charcoal-900">Working Pipeline</h1>
-          <p class="text-xs text-nordic-slate">Personal operational rhythm, deliverables, and linked Google Workspace items</p>
-        </div>
-
-        <div class="flex items-center gap-2 self-start sm:self-auto">
-          <div class="flex items-center bg-bone-150 p-0.5 rounded-lg border border-nordic-border text-xs">
-            <button onclick="filterPipeline('all')" id="filter-all" class="px-2.5 py-1 rounded-md font-medium bg-white text-charcoal-900 shadow-subtle">All</button>
-            <button onclick="filterPipeline('coaching')" id="filter-coaching" class="px-2.5 py-1 rounded-md font-medium text-nordic-slate hover:text-charcoal-900">Coaching</button>
-            <button onclick="filterPipeline('operational')" id="filter-operational" class="px-2.5 py-1 rounded-md font-medium text-nordic-slate hover:text-charcoal-900">Operational</button>
-          </div>
-
-          <button onclick="openNewTaskModal()" class="px-3.5 py-1.5 rounded-lg bg-charcoal-900 text-white text-xs font-medium hover:bg-charcoal-800 transition-colors flex items-center gap-1.5 shadow-subtle">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-            <span>New Task</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Kanban 4-Column Board -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-        <div class="space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'next')">
-          <div class="flex items-center justify-between text-xs text-nordic-muted font-medium px-1">
-            <span class="tracking-wider uppercase text-[11px] font-semibold text-charcoal-700">Next Focus</span>
-            <span id="badge-count-next" class="px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-mono text-[10px]">0</span>
-          </div>
-          <div id="col-next" class="space-y-2.5 min-h-[420px] p-2 rounded-xl bg-bone-100/60 border border-dashed border-nordic-border"></div>
-        </div>
-
-        <div class="space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'in_flight')">
-          <div class="flex items-center justify-between text-xs text-nordic-muted font-medium px-1">
-            <span class="tracking-wider uppercase text-[11px] font-semibold text-charcoal-700">In Flight</span>
-            <span id="badge-count-in_flight" class="px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-mono text-[10px]">0</span>
-          </div>
-          <div id="col-in_flight" class="space-y-2.5 min-h-[420px] p-2 rounded-xl bg-bone-100/60 border border-dashed border-nordic-border"></div>
-        </div>
-
-        <div class="space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'waiting')">
-          <div class="flex items-center justify-between text-xs text-nordic-muted font-medium px-1">
-            <span class="tracking-wider uppercase text-[11px] font-semibold text-charcoal-700">Waiting / Review</span>
-            <span id="badge-count-waiting" class="px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-mono text-[10px]">0</span>
-          </div>
-          <div id="col-waiting" class="space-y-2.5 min-h-[420px] p-2 rounded-xl bg-bone-100/60 border border-dashed border-nordic-border"></div>
-        </div>
-
-        <div class="space-y-3" ondragover="allowDrop(event)" ondrop="drop(event, 'done')">
-          <div class="flex items-center justify-between text-xs text-nordic-muted font-medium px-1">
-            <span class="tracking-wider uppercase text-[11px] font-semibold text-charcoal-700">Complete</span>
-            <span id="badge-count-done" class="px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-mono text-[10px]">0</span>
-          </div>
-          <div id="col-done" class="space-y-2.5 min-h-[420px] p-2 rounded-xl bg-bone-100/60 border border-dashed border-nordic-border"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 2: COACHING & ROSTER MANAGEMENT -->
-    <section id="view-coaching" class="hidden space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-nordic-border">
-        <div>
-          <h1 class="text-xl font-semibold tracking-tight text-charcoal-900">Coaching & People Development</h1>
-          <p class="text-xs text-nordic-slate">Direct oversight, observation logs, and Google Drive coaching dossiers</p>
-        </div>
-        <div class="flex items-center flex-wrap gap-2 self-start sm:self-auto">
-          <button onclick="openNewLocationModal()" class="px-3 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border text-xs font-medium text-charcoal-900 transition-colors flex items-center gap-1.5">
-            <i data-lucide="map-pin-plus" class="w-3.5 h-3.5 text-nordic-blue"></i>
-            <span>Add Location</span>
-          </button>
-          <button onclick="openNewEmployeeModal()" class="px-3 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border text-xs font-medium text-charcoal-900 transition-colors flex items-center gap-1.5">
-            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-            <span>Add Team Member</span>
-          </button>
-          <button onclick="openNewCoachingModal()" class="px-3.5 py-1.5 rounded-lg bg-charcoal-900 text-white text-xs font-medium hover:bg-charcoal-800 transition-colors flex items-center gap-1.5 shadow-subtle">
-            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-            <span>Log Coaching Session</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        <!-- Employee Selector Grouped by Location -->
-        <div class="lg:col-span-4 space-y-3">
-          <div class="flex items-center justify-between text-xs text-nordic-muted px-1 font-medium">
-            <span id="roster-count-label">TEAM ROSTER</span>
-            <div class="flex items-center gap-1">
-              <i data-lucide="map-pin" class="w-3 h-3 text-nordic-muted"></i>
-              <select id="store-location-filter" onchange="filterRosterByLocation(this.value)" class="text-[11px] bg-bone-100 font-medium text-charcoal-900 border border-nordic-border rounded-md px-1.5 py-0.5 focus:outline-none cursor-pointer">
-                <option value="all">All Locations</option>
-              </select>
-            </div>
-          </div>
-          <div class="space-y-3" id="employee-list-container"></div>
-        </div>
-
-        <!-- Selected Employee Dossier & Next Visit Plan -->
-        <div class="lg:col-span-8 space-y-4" id="employee-dossier-panel"></div>
-
-      </div>
-    </section>
-
-    <!-- VIEW 3: WORKSPACE FEED -->
-    <section id="view-workspace" class="hidden space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-nordic-border">
-        <div>
-          <h1 class="text-xl font-semibold tracking-tight text-charcoal-900">Google Workspace Feed</h1>
-          <p class="text-xs text-nordic-slate">Incoming action items, emails, and calendar synchronization</p>
-        </div>
-        <button onclick="showToast('Workspace refreshed · Synced with Google Account')" class="px-3 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border text-xs font-medium text-charcoal-900 transition-colors flex items-center gap-1.5">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>Check Gmail & Calendar</span>
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-4">
-          <div class="flex items-center justify-between border-b border-nordic-border pb-3">
-            <div class="flex items-center gap-2">
-              <i data-lucide="mail" class="w-4 h-4 text-red-500"></i>
-              <h2 class="text-sm font-semibold text-charcoal-900">Gmail Action Threads</h2>
-            </div>
-            <span class="text-[11px] font-mono bg-bone-100 px-2 py-0.5 rounded text-nordic-slate">Grounded with Auth</span>
-          </div>
-
-          <div class="space-y-3 text-xs" id="workspace-emails-container">
-            <div class="p-3.5 rounded-xl bg-bone-50 border border-nordic-border space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-charcoal-900">Dealership Q4 Readiness Notice</span>
-                <span class="text-[10px] text-nordic-muted">Recent</span>
-              </div>
-              <p class="text-nordic-slate text-[11.5px] leading-relaxed">
-                "Please verify all sales consultants have completed the updated inventory walkaround orientation before the weekend."
-              </p>
-              <div class="flex items-center justify-between pt-1">
-                <span class="text-[10.5px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Action Item Detected</span>
-                <button onclick="convertEmailToTask('Verify store walkaround orientation completion')" class="px-2.5 py-1 rounded bg-white hover:bg-bone-100 border border-nordic-border text-[11px] font-medium flex items-center gap-1">
-                  <i data-lucide="plus" class="w-3 h-3"></i> Add to Pipeline
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-4">
-          <div class="flex items-center justify-between border-b border-nordic-border pb-3">
-            <div class="flex items-center gap-2">
-              <i data-lucide="calendar" class="w-4 h-4 text-nordic-blue"></i>
-              <h2 class="text-sm font-semibold text-charcoal-900">Google Calendar 1-on-1s</h2>
-            </div>
-            <span class="text-[11px] font-mono bg-bone-100 px-2 py-0.5 rounded text-nordic-slate">Synced</span>
-          </div>
-
-          <div class="space-y-3 text-xs" id="workspace-calendar-container">
-            <div class="p-3.5 rounded-xl bg-bone-50 border border-nordic-border flex items-center justify-between">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-charcoal-900">Field Store Visit & Floor Review</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">Scheduled</span>
-                </div>
-                <p class="text-[11px] text-nordic-slate mt-0.5">This Thursday at 10:00 AM · 45 min</p>
-              </div>
-              <button onclick="toggleCopilot()" class="px-2.5 py-1.5 rounded-lg bg-charcoal-900 text-white text-[11px] font-medium flex items-center gap-1 hover:bg-charcoal-800">
-                <i data-lucide="sparkles" class="w-3 h-3 text-amber-300"></i> Prep AI Outline
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 4: TEMPLATES LIBRARY -->
-    <section id="view-templates" class="hidden space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-nordic-border">
-        <div>
-          <h1 class="text-xl font-semibold tracking-tight text-charcoal-900">Coaching Template Library</h1>
-          <p class="text-xs text-nordic-slate">Standardized frameworks automatically saved into Google Drive dossiers</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3">
-          <div class="w-9 h-9 rounded-lg bg-bone-150 flex items-center justify-center text-charcoal-900 font-bold">
-            <i data-lucide="file-check-2" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-semibold text-sm text-charcoal-900">22-Step Sales Walkaround</h3>
-            <p class="text-nordic-slate text-[11.5px] mt-1 leading-relaxed">
-              Standardized guest greeting, vehicle walk-around presentation, and trade appraisal discussion.
-            </p>
-          </div>
-          <button onclick="cloneTemplateToDoc('22-Step Sales Walkaround')" class="w-full py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border font-medium text-charcoal-900 flex items-center justify-center gap-1.5">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Use Framework
-          </button>
-        </div>
-
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3">
-          <div class="w-9 h-9 rounded-lg bg-bone-150 flex items-center justify-center text-charcoal-900 font-bold">
-            <i data-lucide="target" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-semibold text-sm text-charcoal-900">STAR Behavioral Debrief</h3>
-            <p class="text-nordic-slate text-[11.5px] mt-1 leading-relaxed">
-              Situation, Task, Action, Result framework for objection handling and finance consultation.
-            </p>
-          </div>
-          <button onclick="cloneTemplateToDoc('STAR Behavioral Debrief')" class="w-full py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border font-medium text-charcoal-900 flex items-center justify-center gap-1.5">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Use Framework
-          </button>
-        </div>
-
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-3">
-          <div class="w-9 h-9 rounded-lg bg-bone-150 flex items-center justify-center text-charcoal-900 font-bold">
-            <i data-lucide="trending-up" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-semibold text-sm text-charcoal-900">Quarterly Growth Agreement</h3>
-            <p class="text-nordic-slate text-[11.5px] mt-1 leading-relaxed">
-              Long-term progression roadmap covering leadership development, closing ratios, and CSAT goals.
-            </p>
-          </div>
-          <button onclick="cloneTemplateToDoc('Quarterly Growth Agreement')" class="w-full py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border font-medium text-charcoal-900 flex items-center justify-center gap-1.5">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Use Framework
-          </button>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- GEMINI COPILOT SLIDE-OUT DRAWER -->
-  <aside id="copilot-drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-white border-l border-nordic-border shadow-floating transform translate-x-full transition-transform duration-200 ease-out flex flex-col">
-    <div class="p-4 border-b border-nordic-border flex items-center justify-between bg-bone-50">
-      <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-charcoal-900 text-white flex items-center justify-center">
-          <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
-        </div>
-        <div>
-          <h3 class="text-xs font-semibold text-charcoal-900">Cadence Intelligence</h3>
-          <p class="text-[10px] text-nordic-slate" id="copilot-model-label">Gemini 2.5 Flash · Workspace Grounded</p>
-        </div>
-      </div>
-      <button onclick="toggleCopilot()" class="p-1 rounded-md text-nordic-muted hover:text-charcoal-900 hover:bg-bone-200">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-
-    <div id="copilot-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs">
-      <div class="p-3.5 rounded-xl bg-bone-100 border border-nordic-border text-nordic-slate space-y-2">
-        <p class="text-charcoal-900 font-medium">Hello. I am synchronized with your active stores, team roster, and Firestore database.</p>
-        <p class="text-[11.5px]">How can I assist your leadership rhythm today?</p>
-        <div class="pt-1 flex flex-wrap gap-1.5">
-          <button onclick="sendQuickCopilotPrompt('Recommend a 3-part visit plan for my next store walkthrough')" class="px-2 py-1 rounded bg-white border border-nordic-border text-[11px] text-charcoal-800 hover:border-charcoal-900">
-            Suggest Store Walk Plan
-          </button>
-          <button onclick="sendQuickCopilotPrompt('Help me draft a coaching goal for a sales consultant struggling with trade appraisals')" class="px-2 py-1 rounded bg-white border border-nordic-border text-[11px] text-charcoal-800 hover:border-charcoal-900">
-            Coach Appraisal Skills
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="p-3 border-t border-nordic-border bg-bone-50">
-      <form onsubmit="handleCopilotSubmit(event)" class="relative flex items-center">
-        <input type="text" id="copilot-input" placeholder="Ask Gemini to draft visit tasks, coach staff..." class="w-full pl-3 pr-10 py-2 rounded-xl bg-white border border-nordic-border text-xs focus:outline-none focus:border-charcoal-900" />
-        <button type="submit" class="absolute right-2 p-1 rounded-md text-charcoal-900 hover:bg-bone-150">
-          <i data-lucide="arrow-up" class="w-4 h-4"></i>
-        </button>
-      </form>
-    </div>
-  </aside>
-
-  <!-- MODAL: SETTINGS & GEMINI API KEY -->
-  <div id="modal-settings" class="fixed inset-0 z-50 bg-charcoal-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
-    <div class="w-full max-w-md bg-white rounded-2xl border border-nordic-border shadow-floating overflow-hidden">
-      <div class="px-5 py-4 border-b border-nordic-border flex items-center justify-between bg-bone-50">
-        <div>
-          <h3 class="text-sm font-semibold text-charcoal-900">Settings & AI Keys</h3>
-          <p class="text-[11px] text-nordic-slate">Configure your personal Google Gemini API connection</p>
-        </div>
-        <button onclick="closeSettingsModal()" class="p-1 rounded-md text-nordic-muted hover:text-charcoal-900">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleSaveSettings(event)" class="p-5 space-y-3.5 text-xs">
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Google Gemini API Key</label>
-          <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 focus:outline-none font-mono text-[11px]" />
-          <p class="text-[10px] text-nordic-muted mt-1">Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-nordic-blue underline">Google AI Studio</a>. Key is securely stored only in your private browser session.</p>
-        </div>
-
-        <div class="p-3 rounded-xl bg-bone-100 border border-nordic-border space-y-1 text-[11px] text-nordic-slate">
-          <div class="flex items-center justify-between">
-            <span class="font-medium text-charcoal-900">Firestore Account Sandbox</span>
-            <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono text-[10px]" id="db-user-id-badge">Loading...</span>
-          </div>
-          <p class="text-[10.5px]">Your stores, roster, and tasks are isolated to your Google User ID.</p>
-        </div>
-
-        <div class="pt-3 border-t border-nordic-border flex items-center justify-end gap-2">
-          <button type="button" onclick="closeSettingsModal()" class="px-3.5 py-1.5 rounded-lg border border-nordic-border text-charcoal-700 hover:bg-bone-100">Cancel</button>
-          <button type="submit" class="px-4 py-1.5 rounded-lg bg-charcoal-900 text-white font-medium hover:bg-charcoal-800 transition-colors">Save Key</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: CREATE PIPELINE TASK -->
-  <div id="modal-new-task" class="fixed inset-0 z-50 bg-charcoal-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
-    <div class="w-full max-w-md bg-white rounded-2xl border border-nordic-border shadow-floating overflow-hidden">
-      <div class="px-5 py-4 border-b border-nordic-border flex items-center justify-between bg-bone-50">
-        <h3 class="text-sm font-semibold text-charcoal-900">New Deliverable</h3>
-        <button onclick="closeNewTaskModal()" class="p-1 rounded-md text-nordic-muted hover:text-charcoal-900">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleCreateTask(event)" class="p-5 space-y-3.5 text-xs">
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Task Title</label>
-          <input type="text" id="task-input-title" required placeholder="e.g. Conduct floor observation audit" class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 focus:outline-none" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-medium text-charcoal-900 mb-1">Pipeline Column</label>
-            <select id="task-input-column" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-              <option value="next">Next Focus</option>
-              <option value="in_flight">In Flight</option>
-              <option value="waiting">Waiting / Review</option>
-              <option value="done">Complete</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-medium text-charcoal-900 mb-1">Category Tag</label>
-            <select id="task-input-category" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-              <option value="Coaching">Coaching</option>
-              <option value="Operational">Operational</option>
-              <option value="Compliance">Compliance</option>
-              <option value="Workspace">Workspace</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Linked Team Member (Optional)</label>
-          <select id="task-input-employee" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-            <option value="None">None (General Deliverable)</option>
-          </select>
-        </div>
-
-        <div class="pt-3 border-t border-nordic-border flex items-center justify-end gap-2">
-          <button type="button" onclick="closeNewTaskModal()" class="px-3.5 py-1.5 rounded-lg border border-nordic-border text-charcoal-700 hover:bg-bone-100">Cancel</button>
-          <button type="submit" class="px-4 py-1.5 rounded-lg bg-charcoal-900 text-white font-medium hover:bg-charcoal-800 transition-colors">Save Task</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: ADD STORE LOCATION -->
-  <div id="modal-new-location" class="fixed inset-0 z-50 bg-charcoal-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
-    <div class="w-full max-w-md bg-white rounded-2xl border border-nordic-border shadow-floating overflow-hidden">
-      <div class="px-5 py-4 border-b border-nordic-border flex items-center justify-between bg-bone-50">
-        <div>
-          <h3 class="text-sm font-semibold text-charcoal-900">Create Store Location</h3>
-          <p class="text-[11px] text-nordic-slate">Add a showroom, dealership, or facility hub</p>
-        </div>
-        <button onclick="closeNewLocationModal()" class="p-1 rounded-md text-nordic-muted hover:text-charcoal-900">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleCreateLocation(event)" class="p-5 space-y-3.5 text-xs">
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Location Name</label>
-          <input type="text" id="loc-input-name" required placeholder="e.g. Westside Studio" class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 focus:outline-none" oninput="updateLocationDrivePreview(this.value)" />
-        </div>
-
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Location Type</label>
-          <select id="loc-input-type" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-            <option value="OEM Dealership">OEM Dealership</option>
-            <option value="Used Car Dealership">Used Car Dealership</option>
-            <option value="Service Centre">Service Centre</option>
-          </select>
-        </div>
-
-        <div class="p-3 rounded-xl bg-bone-150 border border-nordic-border space-y-1 text-[11px] text-nordic-slate">
-          <div class="flex items-center justify-between">
-            <span class="flex items-center gap-1.5 font-medium text-charcoal-900">
-              <i data-lucide="folder" class="w-3.5 h-3.5 text-amber-600"></i>
-              Google Drive Root Structure
-            </span>
-            <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono text-[10px]">Cloud Provisioned</span>
-          </div>
-          <p class="text-[10.5px]">Coaching dossiers organized inside: <br><code id="loc-drive-preview" class="text-charcoal-900 bg-white px-1.5 py-0.5 rounded block mt-1 font-mono text-[10px]">Drive/Coaching Records/[Location Name]/</code></p>
-        </div>
-
-        <div class="pt-3 border-t border-nordic-border flex items-center justify-end gap-2">
-          <button type="button" onclick="closeNewLocationModal()" class="px-3.5 py-1.5 rounded-lg border border-nordic-border text-charcoal-700 hover:bg-bone-100">Cancel</button>
-          <button type="submit" class="px-4 py-1.5 rounded-lg bg-charcoal-900 text-white font-medium hover:bg-charcoal-800 transition-colors">Create Location</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: ADD TEAM MEMBER -->
-  <div id="modal-new-employee" class="fixed inset-0 z-50 bg-charcoal-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
-    <div class="w-full max-w-md bg-white rounded-2xl border border-nordic-border shadow-floating overflow-hidden">
-      <div class="px-5 py-4 border-b border-nordic-border flex items-center justify-between bg-bone-50">
-        <div>
-          <h3 class="text-sm font-semibold text-charcoal-900">Add Team Member</h3>
-          <p class="text-[11px] text-nordic-slate">Assign to a store location & configure Drive dossier</p>
-        </div>
-        <button onclick="closeNewEmployeeModal()" class="p-1 rounded-md text-nordic-muted hover:text-charcoal-900">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleCreateEmployee(event)" class="p-5 space-y-3.5 text-xs">
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Full Name</label>
-          <input type="text" id="emp-input-name" required placeholder="e.g. Henrik Lindqvist" class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 focus:outline-none" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-medium text-charcoal-900 mb-1">Role / Title</label>
-            <input type="text" id="emp-input-role" required placeholder="e.g. Sales Consultant" class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block font-medium text-charcoal-900 mb-1">Department</label>
-            <select id="emp-input-dept" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-              <option value="Guest Experience">Guest Experience</option>
-              <option value="Certified Pre-Owned">Certified Pre-Owned</option>
-              <option value="Aftersales & Service">Aftersales & Service</option>
-              <option value="Corporate Fleet">Corporate Fleet</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Store Location</label>
-          <select id="emp-input-location-select" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs"></select>
-        </div>
-
-        <div class="pt-3 border-t border-nordic-border flex items-center justify-end gap-2">
-          <button type="button" onclick="closeNewEmployeeModal()" class="px-3.5 py-1.5 rounded-lg border border-nordic-border text-charcoal-700 hover:bg-bone-100">Cancel</button>
-          <button type="submit" class="px-4 py-1.5 rounded-lg bg-charcoal-900 text-white font-medium hover:bg-charcoal-800 transition-colors">Add to Roster</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: LOG COACHING SESSION -->
-  <div id="modal-new-coaching" class="fixed inset-0 z-50 bg-charcoal-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
-    <div class="w-full max-w-lg bg-white rounded-2xl border border-nordic-border shadow-floating overflow-hidden">
-      <div class="px-5 py-4 border-b border-nordic-border flex items-center justify-between bg-bone-50">
-        <div>
-          <h3 class="text-sm font-semibold text-charcoal-900">Log Coaching Session</h3>
-          <p class="text-[11px] text-nordic-slate">Saves observation record to the team member's Drive folder</p>
-        </div>
-        <button onclick="closeNewCoachingModal()" class="p-1 rounded-md text-nordic-muted hover:text-charcoal-900">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleCreateCoaching(event)" class="p-5 space-y-3.5 text-xs">
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Team Member</label>
-          <select id="coach-employee-select" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs"></select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-medium text-charcoal-900 mb-1">Session Framework</label>
-            <select id="coach-framework-select" class="w-full px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-              <option value="Sales 22-Step Observation">Sales 22-Step Observation</option>
-              <option value="STAR Behavioral Debrief">STAR Behavioral Debrief</option>
-              <option value="Quarterly Growth Plan">Quarterly Growth Plan</option>
-              <option value="Delivery Protocol Audit">Delivery Protocol Audit</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-medium text-charcoal-900 mb-1">Session Date</label>
-            <input type="text" id="coach-date-input" value="Today" class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900" />
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Key Observation & Wins</label>
-          <textarea id="coach-wins-input" rows="2" placeholder="What demonstrated excellence in this observation?" class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-medium text-charcoal-900 mb-1">Agreed Growth Commitment</label>
-          <textarea id="coach-focus-input" rows="2" placeholder="Specific behavioral adjustments or follow-up milestones..." class="w-full px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900"></textarea>
-        </div>
-
-        <div class="pt-3 border-t border-nordic-border flex items-center justify-end gap-2">
-          <button type="button" onclick="closeNewCoachingModal()" class="px-3.5 py-1.5 rounded-lg border border-nordic-border text-charcoal-700 hover:bg-bone-100">Cancel</button>
-          <button type="submit" class="px-4 py-1.5 rounded-lg bg-charcoal-900 text-white font-medium hover:bg-charcoal-800 transition-colors flex items-center gap-1.5">
-            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-            <span>Save & Record Doc</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: COMMAND PALETTE (⌘K) -->
-  <div id="modal-cmd" class="fixed inset-0 z-50 bg-charcoal-900/40 backdrop-blur-xs hidden items-start justify-center pt-20 p-4" onclick="handleCmdBackdrop(event)">
-    <div class="w-full max-w-lg bg-white rounded-2xl border border-nordic-border shadow-floating overflow-hidden" onclick="event.stopPropagation()">
-      <div class="p-3 border-b border-nordic-border flex items-center gap-2.5 bg-bone-50">
-        <i data-lucide="search" class="w-4 h-4 text-nordic-slate"></i>
-        <input type="text" id="cmd-input" placeholder="Type a command or jump to view..." class="w-full bg-transparent text-xs text-charcoal-900 focus:outline-none" oninput="filterCommandPalette(this.value)" />
-        <kbd class="px-1.5 py-0.5 rounded bg-white border border-nordic-border text-[10px] font-mono text-nordic-muted">ESC</kbd>
-      </div>
-      <div id="cmd-results" class="p-2 space-y-1 max-h-72 overflow-y-auto text-xs">
-        <div onclick="switchView('dashboard'); closeCommandPalette();" class="p-2.5 rounded-lg hover:bg-bone-100 cursor-pointer flex items-center justify-between">
-          <span class="flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5 text-nordic-slate"></i> Open Executive Dashboard</span>
-          <span class="text-[10px] text-nordic-muted">Jump</span>
-        </div>
-        <div onclick="switchView('pipeline'); closeCommandPalette();" class="p-2.5 rounded-lg hover:bg-bone-100 cursor-pointer flex items-center justify-between">
-          <span class="flex items-center gap-2"><i data-lucide="kanban" class="w-3.5 h-3.5 text-nordic-slate"></i> Open Working Pipeline</span>
-          <span class="text-[10px] text-nordic-muted">Jump</span>
-        </div>
-        <div onclick="switchView('coaching'); closeCommandPalette();" class="p-2.5 rounded-lg hover:bg-bone-100 cursor-pointer flex items-center justify-between">
-          <span class="flex items-center gap-2"><i data-lucide="users" class="w-3.5 h-3.5 text-nordic-slate"></i> Open Coaching & Roster</span>
-          <span class="text-[10px] text-nordic-muted">Jump</span>
-        </div>
-        <div onclick="openNewTaskModal(); closeCommandPalette();" class="p-2.5 rounded-lg hover:bg-bone-100 cursor-pointer flex items-center justify-between">
-          <span class="flex items-center gap-2"><i data-lucide="plus" class="w-3.5 h-3.5 text-nordic-slate"></i> Create New Pipeline Task</span>
-          <span class="text-[10px] text-nordic-muted">Action</span>
-        </div>
-        <div onclick="openNewLocationModal(); closeCommandPalette();" class="p-2.5 rounded-lg hover:bg-bone-100 cursor-pointer flex items-center justify-between">
-          <span class="flex items-center gap-2"><i data-lucide="map-pin-plus" class="w-3.5 h-3.5 text-nordic-slate"></i> Create New Store Location</span>
-          <span class="text-[10px] text-nordic-muted">Action</span>
-        </div>
-        <div onclick="openSettingsModal(); closeCommandPalette();" class="p-2.5 rounded-lg hover:bg-bone-100 cursor-pointer flex items-center justify-between">
-          <span class="flex items-center gap-2"><i data-lucide="settings" class="w-3.5 h-3.5 text-nordic-slate"></i> API Settings & AI Configuration</span>
-          <span class="text-[10px] text-nordic-muted">Settings</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notification Capsule -->
-  <div id="toast-container" class="fixed bottom-5 right-5 z-50 pointer-events-none"></div>
-
-  <!-- APPLICATION LOGIC & REAL-TIME FIRESTORE ENGINE -->
-  <script>
     let currentUser = null;
-    let geminiApiKey = localStorage.getItem('cadence_gemini_api_key') || '';
-    let db = null;
-    let auth = null;
+    let unsubscribeFirestore = null;
 
-    let currentView = 'dashboard';
-    let selectedEmployeeId = null;
-    let activeFilter = 'all';
-    let selectedLocationFilter = 'all';
+    window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
 
-    // Application State (Isolated to user)
-    let storeLocations = [];
-    let pipelineTasks = [];
-    let teamMembers = [];
-    let recentDossiers = [];
-
-    // Initialize Firebase
-    function initFirebase() {
+    // Google Sign-In Action
+    window.loginWithGoogle = async () => {
       try {
-        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-          auth = firebase.auth();
-          db = firebase.firestore();
-        } else if (typeof firebase !== 'undefined') {
-          // Fallback demo config if running standalone outside Firebase Hosting
-          console.warn("Firebase Hosting auto-init not detected. Checking for fallback auth.");
-        }
+        await signInWithPopup(auth, provider);
       } catch (err) {
-        console.error("Firebase init error:", err);
+        console.error("Auth Error:", err);
+        alert("Sign in failed: " + err.message);
       }
+    };
 
-      if (auth) {
-        auth.onAuthStateChanged((user) => {
-          if (user) {
-            handleUserSignedIn(user);
-          } else {
-            handleUserSignedOut();
-          }
-        });
-      } else {
-        // Standalone preview fallback (if testing without Firebase keys configured yet)
-        console.info("Running in local storage fallback mode.");
-        loadLocalFallbackData();
-      }
-    }
+    // Sign-Out Action
+    window.logout = async () => {
+      if (unsubscribeFirestore) unsubscribeFirestore();
+      await signOut(auth);
+    };
 
-    function signInWithGoogle() {
-      if (!auth) {
-        // Fallback demo login
-        const mockUser = {
-          uid: 'demo_manager_uid',
-          displayName: 'Marcus (Demo Mode)',
-          email: 'manager@dealership.com',
-          photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'
-        };
-        handleUserSignedIn(mockUser);
-        return;
-      }
-
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch((error) => {
-        console.error("Auth error:", error);
-        alert("Google Sign-In Notice: " + error.message + "\n\nTip: Ensure 'Google' sign-in provider is enabled in Firebase Console > Authentication.");
-      });
-    }
-
-    function signOutGoogle() {
-      if (auth) {
-        auth.signOut();
-      } else {
-        handleUserSignedOut();
-      }
-    }
-
-    function handleUserSignedIn(user) {
-      currentUser = user;
-      document.getElementById('auth-gate').classList.add('hidden');
-      document.getElementById('main-header').classList.remove('hidden');
-      document.getElementById('main-content').classList.remove('hidden');
-
-      // Populate user info
-      const displayName = user.displayName || user.email.split('@')[0];
-      document.getElementById('user-display-name').textContent = displayName;
-      document.getElementById('user-email-text').textContent = user.email;
-      document.getElementById('dash-greeting').textContent = `Good afternoon, ${displayName.split(' ')[0]}`;
-      if (user.photoURL) {
-        document.getElementById('user-avatar').src = user.photoURL;
-      }
-      document.getElementById('db-user-id-badge').textContent = `UID: ${user.uid.substring(0, 8)}...`;
-
-      updateKeyBadge();
-      loadUserData(user.uid);
-    }
-
-    function handleUserSignedOut() {
-      currentUser = null;
-      document.getElementById('auth-gate').classList.remove('hidden');
-      document.getElementById('main-header').classList.add('hidden');
-      document.getElementById('main-content').classList.add('hidden');
-    }
-
-    // Database Sync: Firestore or LocalStorage
-    async function loadUserData(uid) {
-      if (db) {
-        try {
-          const userDocRef = db.collection('users').doc(uid);
-          const doc = await userDocRef.get();
-
-          if (doc.exists) {
-            const data = doc.data();
-            storeLocations = data.storeLocations || [];
-            teamMembers = data.teamMembers || [];
-            pipelineTasks = data.pipelineTasks || [];
-            recentDossiers = data.recentDossiers || [];
-          } else {
-            // First login from scratch!
-            storeLocations = [];
-            teamMembers = [];
-            pipelineTasks = [];
-            recentDossiers = [];
-            saveUserData();
-          }
-        } catch (e) {
-          console.warn("Firestore access error, falling back to local sandbox:", e);
-          loadLocalFallbackData();
-        }
-      } else {
-        loadLocalFallbackData();
-      }
-
-      if (teamMembers.length > 0 && !selectedEmployeeId) {
-        selectedEmployeeId = teamMembers[0].id;
-      }
-
-      refreshAllViews();
-    }
-
-    async function saveUserData() {
+    // Save active state to Firestore
+    window.saveState = async () => {
       if (!currentUser) return;
-
-      const payload = {
-        storeLocations,
-        teamMembers,
-        pipelineTasks,
-        recentDossiers,
-        updatedAt: new Date().toISOString()
-      };
-
-      // Save to Firestore
-      if (db) {
-        try {
-          await db.collection('users').doc(currentUser.uid).set(payload, { merge: true });
-        } catch (err) {
-          console.error("Firestore save error:", err);
-        }
+      try {
+        const userDoc = doc(db, "users", currentUser.uid);
+        await setDoc(userDoc, {
+          locations: window.cadenceState.locations,
+          employees: window.cadenceState.employees,
+          visitPlans: window.cadenceState.visitPlans,
+          tasks: window.cadenceState.tasks,
+          geminiApiKey: window.cadenceState.geminiApiKey || ""
+        }, { merge: true });
+      } catch (err) {
+        console.error("Save error:", err);
       }
+    };
 
-      // Mirror to localStorage
-      localStorage.setItem(`cadence_data_${currentUser.uid}`, JSON.stringify(payload));
-    }
+    // Realtime Auth State Listener
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      const authScreen = document.getElementById("auth-screen");
+      const appInterface = document.getElementById("app-interface");
 
-    function loadLocalFallbackData() {
-      const saved = localStorage.getItem(`cadence_data_${currentUser?.uid || 'guest'}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          storeLocations = parsed.storeLocations || [];
-          teamMembers = parsed.teamMembers || [];
-          pipelineTasks = parsed.pipelineTasks || [];
-          recentDossiers = parsed.recentDossiers || [];
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        // Start completely clean
-        storeLocations = [];
-        teamMembers = [];
-        pipelineTasks = [];
-        recentDossiers = [];
-      }
-    }
+      if (user) {
+        authScreen.classList.add("hidden");
+        appInterface.classList.remove("hidden");
 
-    function refreshAllViews() {
-      updateEmployeeDropdowns();
-      renderDashboard();
-      renderPipeline();
-      renderCoachingView();
-      lucide.createIcons();
-    }
+        // Set User Profile in Nav
+        document.getElementById("user-name").textContent = user.displayName || user.email;
+        document.getElementById("user-avatar").src = user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
 
-    // View Switching
-    function switchView(viewName) {
-      currentView = viewName;
-      ['dashboard', 'pipeline', 'coaching', 'workspace', 'templates'].forEach(v => {
-        const sec = document.getElementById(`view-${v}`);
-        const tab = document.getElementById(`tab-${v}`);
-        if (sec) sec.classList.toggle('hidden', v !== viewName);
-        if (tab) {
-          if (v === viewName) {
-            tab.className = "px-3 py-1.5 rounded-lg transition-colors bg-white text-charcoal-900 shadow-subtle border border-nordic-border font-medium";
-          } else {
-            tab.className = "px-3 py-1.5 rounded-lg transition-colors hover:text-charcoal-900 hover:bg-bone-150 text-nordic-slate font-medium";
-          }
-        }
-      });
-
-      if (viewName === 'dashboard') renderDashboard();
-      if (viewName === 'pipeline') renderPipeline();
-      if (viewName === 'coaching') renderCoachingView();
-      lucide.createIcons();
-    }
-
-    // Executive Dashboard Render
-    function renderDashboard() {
-      const activeTasks = pipelineTasks.filter(t => t.stage !== 'done');
-      const completedTasks = pipelineTasks.filter(t => t.stage === 'done');
-
-      document.getElementById('dash-stat-active-tasks').textContent = activeTasks.length;
-      document.getElementById('dash-stat-tasks-done').innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> ${completedTasks.length} completed`;
-      document.getElementById('dash-stat-locations-count').textContent = storeLocations.length;
-      document.getElementById('dash-stat-store-summary').textContent = storeLocations.length === 1 ? '1 facility active' : `${storeLocations.length} facilities active`;
-      document.getElementById('dash-stat-team-count').textContent = teamMembers.length;
-
-      // Pipeline Focus
-      const focusContainer = document.getElementById('dash-pipeline-focus');
-      focusContainer.innerHTML = '';
-      const focusItems = pipelineTasks.filter(t => t.stage === 'next' || t.stage === 'in_flight').slice(0, 4);
-
-      if (focusItems.length === 0) {
-        focusContainer.innerHTML = `
-          <div class="p-6 rounded-xl border border-dashed border-nordic-border text-center text-xs text-nordic-muted space-y-2">
-            <p>No active tasks in your working pipeline.</p>
-            <button onclick="openNewTaskModal()" class="px-2.5 py-1 rounded bg-charcoal-900 text-white font-medium hover:bg-charcoal-800">
-              + Add First Task
-            </button>
-          </div>
-        `;
-      } else {
-        focusItems.forEach(task => {
-          const item = document.createElement('div');
-          item.className = "p-3 rounded-xl bg-bone-50 hover:bg-bone-100/70 border border-nordic-border flex items-center justify-between text-xs transition-colors";
-          item.innerHTML = `
-            <div class="flex items-center gap-3">
-              <span class="w-2 h-2 rounded-full ${task.stage === 'in_flight' ? 'bg-blue-600' : 'bg-charcoal-900'}"></span>
-              <div>
-                <h4 class="font-medium text-charcoal-900 leading-snug">${task.title}</h4>
-                <div class="flex items-center gap-2 mt-0.5 text-[11px] text-nordic-muted">
-                  <span class="uppercase text-[9.5px] font-semibold px-1.5 py-0.2 rounded bg-bone-200 text-charcoal-700">${task.category}</span>
-                  <span>${task.employee ? '· ' + task.employee : '· ' + task.date}</span>
-                </div>
-              </div>
-            </div>
-            <button onclick="advanceTaskStage(${task.id})" class="p-1.5 rounded-md bg-white border border-nordic-border hover:border-charcoal-900 text-charcoal-700" title="Advance Stage">
-              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-            </button>
-          `;
-          focusContainer.appendChild(item);
-        });
-      }
-
-      // Store Facility Cards
-      const storeContainer = document.getElementById('dash-store-cards-container');
-      storeContainer.innerHTML = '';
-      if (storeLocations.length === 0) {
-        storeContainer.innerHTML = `
-          <div class="col-span-2 p-6 rounded-xl border border-dashed border-nordic-border text-center text-xs text-nordic-muted space-y-2">
-            <p>You have not registered any store or dealership locations yet.</p>
-            <button onclick="openNewLocationModal()" class="px-3 py-1.5 rounded-lg bg-charcoal-900 text-white font-medium hover:bg-charcoal-800">
-              + Create Your First Location
-            </button>
-          </div>
-        `;
-      } else {
-        storeLocations.forEach(loc => {
-          const membersAtLoc = teamMembers.filter(m => m.location === loc.name);
-          const card = document.createElement('div');
-          card.className = "p-3.5 rounded-xl bg-bone-50 hover:bg-white border border-nordic-border transition-all cursor-pointer space-y-2";
-          card.onclick = () => {
-            selectedLocationFilter = loc.name;
-            switchView('coaching');
-          };
-          card.innerHTML = `
-            <div class="flex items-center justify-between">
-              <span class="font-semibold text-xs text-charcoal-900 truncate">${loc.name}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-bone-200 text-charcoal-800 font-medium">${loc.type}</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] text-nordic-slate pt-1">
-              <span>${membersAtLoc.length} team members</span>
-              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-nordic-muted"></i>
-            </div>
-          `;
-          storeContainer.appendChild(card);
-        });
-      }
-
-      // Next Visit Tasks Preview
-      const visitTasksContainer = document.getElementById('dash-visit-tasks-container');
-      visitTasksContainer.innerHTML = '';
-      let allVisitTasks = [];
-      teamMembers.forEach(m => {
-        (m.visitPlan || []).filter(v => !v.completed).forEach(v => {
-          allVisitTasks.push({ ...v, staffName: m.name, location: m.location });
-        });
-      });
-
-      if (allVisitTasks.length === 0) {
-        visitTasksContainer.innerHTML = `
-          <div class="p-4 rounded-xl border border-dashed border-nordic-border text-center text-xs text-nordic-muted">
-            No upcoming visit tasks logged. Open Coaching & Roster to set visit plans.
-          </div>
-        `;
-      } else {
-        allVisitTasks.slice(0, 3).forEach(task => {
-          const row = document.createElement('div');
-          row.className = "p-2.5 rounded-xl bg-bone-50 border border-nordic-border flex items-center justify-between";
-          row.innerHTML = `
-            <div>
-              <p class="font-medium text-charcoal-900">${task.task}</p>
-              <span class="text-[10px] text-nordic-muted">${task.staffName} · ${task.location}</span>
-            </div>
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">${task.category}</span>
-          `;
-          visitTasksContainer.appendChild(row);
-        });
-      }
-
-      // Recent Coaching Logs
-      const docsContainer = document.getElementById('dash-recent-docs-container');
-      docsContainer.innerHTML = '';
-      if (recentDossiers.length === 0) {
-        docsContainer.innerHTML = `
-          <div class="p-4 rounded-xl border border-dashed border-nordic-border text-center text-xs text-nordic-muted">
-            No session debriefs logged yet. Click "+ Log Record" above.
-          </div>
-        `;
-      } else {
-        recentDossiers.slice(0, 3).forEach(d => {
-          const row = document.createElement('div');
-          row.className = "p-2.5 rounded-lg bg-bone-50 border border-nordic-border flex items-center justify-between";
-          row.innerHTML = `
-            <div class="flex items-center gap-2">
-              <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-600"></i>
-              <div>
-                <span class="font-medium text-charcoal-900 block leading-tight">${d.type}</span>
-                <span class="text-[10px] text-nordic-muted">${d.employee} · ${d.date}</span>
-              </div>
-            </div>
-            <span class="text-[10px] text-nordic-slate font-mono">${d.doc}</span>
-          `;
-          docsContainer.appendChild(row);
-        });
-      }
-
-      lucide.createIcons();
-    }
-
-    // Pipeline Kanban Render
-    function renderPipeline() {
-      const columns = ['next', 'in_flight', 'waiting', 'done'];
-      const filtered = pipelineTasks.filter(item => {
-        if (activeFilter === 'coaching') return item.category === 'Coaching';
-        if (activeFilter === 'operational') return item.category === 'Operational';
-        return true;
-      });
-
-      columns.forEach(col => {
-        const colContainer = document.getElementById(`col-${col}`);
-        const badge = document.getElementById(`badge-count-${col}`);
-        if (!colContainer) return;
-
-        const tasksInCol = filtered.filter(t => t.stage === col);
-        if (badge) badge.textContent = tasksInCol.length;
-        colContainer.innerHTML = '';
-
-        if (tasksInCol.length === 0) {
-          colContainer.innerHTML = `<div class="h-28 flex items-center justify-center text-[11px] text-nordic-muted italic">Drop deliverables here</div>`;
-          return;
-        }
-
-        tasksInCol.forEach(task => {
-          const card = document.createElement('div');
-          card.draggable = true;
-          card.ondragstart = (e) => drag(e, task.id);
-          card.className = "p-3.5 rounded-xl bg-white border border-nordic-border shadow-card hover:border-nordic-borderFocus cursor-grab active:cursor-grabbing transition-all space-y-2.5";
-          
-          card.innerHTML = `
-            <div class="flex items-start justify-between gap-2">
-              <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full ${
-                task.category === 'Coaching' ? 'bg-amber-50 text-amber-800' :
-                task.category === 'Compliance' ? 'bg-purple-50 text-purple-800' :
-                'bg-bone-150 text-charcoal-700'
-              }">${task.category}</span>
-              <button onclick="deleteTask(${task.id})" class="p-1 rounded text-nordic-muted hover:text-red-600 transition-colors" title="Delete">
-                <i data-lucide="x" class="w-3 h-3"></i>
-              </button>
-            </div>
-
-            <p class="text-xs font-medium text-charcoal-900 leading-snug">${task.title}</p>
-
-            <div class="pt-2 border-t border-nordic-border flex items-center justify-between text-[11px] text-nordic-muted">
-              <span class="flex items-center gap-1">
-                ${task.employee ? `<i data-lucide="user" class="w-3 h-3"></i> ${task.employee}` : `<i data-lucide="clock" class="w-3 h-3"></i> ${task.date}`}
-              </span>
-              <button onclick="advanceTaskStage(${task.id})" title="Move to next stage" class="p-1 rounded hover:bg-bone-150 text-charcoal-700">
-                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-          `;
-          colContainer.appendChild(card);
-        });
-      });
-      lucide.createIcons();
-    }
-
-    function filterPipeline(type) {
-      activeFilter = type;
-      ['all', 'coaching', 'operational'].forEach(f => {
-        const btn = document.getElementById(`filter-${f}`);
-        if (btn) {
-          btn.className = (f === type) 
-            ? "px-2.5 py-1 rounded-md font-medium bg-white text-charcoal-900 shadow-subtle" 
-            : "px-2.5 py-1 rounded-md font-medium text-nordic-slate hover:text-charcoal-900";
-        }
-      });
-      renderPipeline();
-    }
-
-    function drag(ev, taskId) {
-      ev.dataTransfer.setData("text/plain", taskId);
-    }
-    function allowDrop(ev) {
-      ev.preventDefault();
-    }
-    function drop(ev, targetColumn) {
-      ev.preventDefault();
-      const taskId = parseInt(ev.dataTransfer.getData("text/plain"));
-      const task = pipelineTasks.find(t => t.id === taskId);
-      if (task) {
-        task.stage = targetColumn;
-        saveUserData();
-        renderPipeline();
-        renderDashboard();
-        showToast(`Moved deliverable to ${targetColumn.replace('_', ' ').toUpperCase()}`);
-      }
-    }
-
-    function advanceTaskStage(taskId) {
-      const order = ['next', 'in_flight', 'waiting', 'done'];
-      const task = pipelineTasks.find(t => t.id === taskId);
-      if (!task) return;
-      const currentIndex = order.indexOf(task.stage);
-      if (currentIndex < order.length - 1) {
-        task.stage = order[currentIndex + 1];
-      } else {
-        task.stage = 'next';
-      }
-      saveUserData();
-      renderPipeline();
-      renderDashboard();
-      showToast(`Deliverable moved to ${task.stage.replace('_', ' ').toUpperCase()}`);
-    }
-
-    function deleteTask(taskId) {
-      pipelineTasks = pipelineTasks.filter(t => t.id !== taskId);
-      saveUserData();
-      renderPipeline();
-      renderDashboard();
-      showToast("Task removed");
-    }
-
-    // Coaching & Team View Render
-    function renderCoachingView() {
-      const rosterContainer = document.getElementById('employee-list-container');
-      const dossierPanel = document.getElementById('employee-dossier-panel');
-      const rosterCountLabel = document.getElementById('roster-count-label');
-      const storeFilterSelect = document.getElementById('store-location-filter');
-
-      // Populate store filter
-      storeFilterSelect.innerHTML = `<option value="all">All Locations (${teamMembers.length})</option>`;
-      storeLocations.forEach(loc => {
-        const count = teamMembers.filter(m => m.location === loc.name).length;
-        const opt = document.createElement('option');
-        opt.value = loc.name;
-        opt.textContent = `${loc.name} (${count})`;
-        if (loc.name === selectedLocationFilter) opt.selected = true;
-        storeFilterSelect.appendChild(opt);
-      });
-
-      const visibleMembers = (selectedLocationFilter === 'all') 
-        ? teamMembers 
-        : teamMembers.filter(m => m.location === selectedLocationFilter);
-
-      rosterCountLabel.textContent = `TEAM ROSTER (${visibleMembers.length})`;
-      rosterContainer.innerHTML = '';
-
-      if (storeLocations.length === 0) {
-        rosterContainer.innerHTML = `
-          <div class="p-6 rounded-2xl bg-white border border-nordic-border text-center space-y-2">
-            <p class="text-xs text-nordic-muted">No locations created yet.</p>
-            <button onclick="openNewLocationModal()" class="px-3 py-1.5 rounded-lg bg-charcoal-900 text-white text-xs font-medium">
-              + Add Store Location
-            </button>
-          </div>
-        `;
-        dossierPanel.innerHTML = `
-          <div class="p-8 rounded-2xl bg-white border border-nordic-border text-center space-y-2">
-            <p class="text-xs text-nordic-muted">Add a store location and staff member to configure coaching dossiers.</p>
-          </div>
-        `;
-        return;
-      }
-
-      const displayLocations = (selectedLocationFilter === 'all')
-        ? storeLocations
-        : storeLocations.filter(l => l.name === selectedLocationFilter);
-
-      displayLocations.forEach(loc => {
-        const membersInLoc = visibleMembers.filter(m => m.location === loc.name);
-
-        const groupHeader = document.createElement('div');
-        groupHeader.className = "pt-2 first:pt-0";
-        groupHeader.innerHTML = `
-          <div class="flex items-center justify-between px-1 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-nordic-muted">
-            <span class="flex items-center gap-1.5 text-charcoal-700">
-              <i data-lucide="building-2" class="w-3 h-3 text-nordic-slate"></i>
-              ${loc.name}
-            </span>
-            <span class="font-mono text-[10px] text-nordic-muted">${membersInLoc.length} staff</span>
-          </div>
-        `;
-        rosterContainer.appendChild(groupHeader);
-
-        const groupList = document.createElement('div');
-        groupList.className = "space-y-1.5";
-
-        if (membersInLoc.length === 0) {
-          groupList.innerHTML = `
-            <div class="p-3 rounded-xl border border-dashed border-nordic-border bg-bone-100/50 flex items-center justify-between text-xs text-nordic-muted">
-              <span>No staff assigned</span>
-              <button onclick="openNewEmployeeModalForLocation('${loc.name}')" class="text-nordic-blue hover:underline font-medium text-[11px] flex items-center gap-1">
-                <i data-lucide="plus" class="w-3 h-3"></i> Add Staff
-              </button>
-            </div>
-          `;
-        } else {
-          membersInLoc.forEach(emp => {
-            const isSelected = emp.id === selectedEmployeeId;
-            const card = document.createElement('div');
-            card.className = `p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-              isSelected 
-                ? 'bg-white border-charcoal-900 shadow-card' 
-                : 'bg-bone-100/80 border-nordic-border hover:bg-white hover:border-nordic-borderFocus'
-            }`;
-            card.onclick = () => {
-              selectedEmployeeId = emp.id;
-              renderCoachingView();
+        // Listen to User's Firestore Document
+        const userDocRef = doc(db, "users", user.uid);
+        unsubscribeFirestore = onSnapshot(userDocRef, (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            window.cadenceState = {
+              locations: data.locations || [],
+              employees: data.employees || [],
+              visitPlans: data.visitPlans || {},
+              tasks: data.tasks || [],
+              geminiApiKey: data.geminiApiKey || "",
+              selectedEmpId: window.cadenceState.selectedEmpId || data.employees?.[0]?.id || null
             };
+          } else {
+            // First time login: seed default structure
+            setDoc(userDocRef, defaultData);
+            window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
+          }
+          window.renderAll();
+        });
+      } else {
+        authScreen.classList.remove("hidden");
+        appInterface.classList.add("hidden");
+      }
+    });
+  </script>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-cadence-sand selection:text-cadence-charcoal">
 
-            const pendingTasks = (emp.visitPlan || []).filter(t => !t.completed).length;
+  <!-- ================= AUTHENTICATION MODAL (OFF-CANVAS BEFORE SIGN-IN) ================= -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 bg-cadence-canvas">
+    <div class="max-w-md w-full bg-white border border-cadence-border rounded-2xl p-8 shadow-sm text-center">
+      <div class="inline-flex items-center justify-center p-3 bg-cadence-sandLight rounded-2xl mb-6">
+        <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
 
-            card.innerHTML = `
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-bone-200 border border-nordic-border flex items-center justify-center font-semibold text-xs text-charcoal-900">
-                  ${emp.initials}
-                </div>
-                <div>
-                  <h4 class="text-xs font-semibold text-charcoal-900">${emp.name}</h4>
-                  <p class="text-[11px] text-nordic-slate">${emp.role}</p>
-                </div>
-              </div>
-              <div class="text-right">
-                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${emp.rhythmColor || 'bg-bone-200 text-charcoal-800'}">${emp.rhythmStatus || 'Active'}</span>
-                <span class="block text-[10px] text-nordic-muted mt-1 font-mono">${pendingTasks} visit task${pendingTasks === 1 ? '' : 's'}</span>
-              </div>
-            `;
-            groupList.appendChild(card);
-          });
-        }
+      <h1 class="text-2xl font-bold tracking-brand text-cadence-charcoal uppercase">CADENCE</h1>
+      <p class="text-xs font-medium text-cadence-slate mt-2 tracking-wide uppercase">Leadership & Dealership Coaching Cockpit</p>
+      
+      <p class="text-xs text-cadence-slate mt-4 leading-relaxed">
+        Sign in with your Google account to access your personal pipeline, dealership facilities, coaching dossiers, and next-visit rhythm.
+      </p>
 
-        rosterContainer.appendChild(groupList);
-      });
+      <div class="mt-8">
+        <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-cadence-charcoal text-white hover:bg-black px-5 py-3 rounded-xl text-xs font-semibold tracking-wide transition shadow-sm">
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"/>
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.9z"/>
+            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.2-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/>
+          </svg>
+          Continue with Google
+        </button>
+      </div>
 
-      const currentEmp = teamMembers.find(e => e.id === selectedEmployeeId) || visibleMembers[0];
+      <div class="mt-6 pt-6 border-t border-cadence-border text-[11px] text-cadence-slate flex items-center justify-center gap-1.5">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-cadence-green"></i>
+        <span>Isolated Cloud Firestore Persistence</span>
+      </div>
+    </div>
+  </div>
 
-      if (!currentEmp) {
-        dossierPanel.innerHTML = `
-          <div class="p-8 rounded-2xl bg-white border border-nordic-border text-center space-y-3">
-            <p class="text-xs text-nordic-muted">No team members registered yet.</p>
-            <button onclick="openNewEmployeeModal()" class="px-3.5 py-1.5 rounded-lg bg-charcoal-900 text-white text-xs font-medium">
-              + Add First Team Member
+  <!-- ================= AUTHENTICATED APP INTERFACE ================= -->
+  <div id="app-interface" class="hidden flex-1 flex flex-col">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass-nav border-b border-cadence-border px-6 py-3 transition-all">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div class="flex items-center gap-6">
+          <button onclick="switchView('overview')" class="flex items-center gap-3 group focus:outline-none text-left">
+            <svg class="w-8 h-8 transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-sm font-bold tracking-brand text-cadence-charcoal uppercase leading-none">CADENCE</span>
+              <span class="text-[10px] text-cadence-slate font-medium tracking-wider mt-0.5">EXECUTIVE COCKPIT</span>
+            </div>
+          </button>
+
+          <nav class="hidden md:flex items-center space-x-1 pl-4 border-l border-cadence-border">
+            <button id="nav-btn-overview" onclick="switchView('overview')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors">Overview</button>
+            <button id="nav-btn-pipeline" onclick="switchView('pipeline')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Pipeline</button>
+            <button id="nav-btn-coaching" onclick="switchView('coaching')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Coaching & Roster</button>
+            <button id="nav-btn-workspace" onclick="switchView('workspace')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Workspace Feed</button>
+          </nav>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="toggleCopilot()" class="flex items-center gap-2 bg-cadence-sandLight border border-cadence-border hover:bg-cadence-sand text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-2xs">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cadence-accent"></i>
+            <span class="hidden sm:inline">Ask Gemini</span>
+          </button>
+
+          <!-- User profile -->
+          <div class="flex items-center gap-2.5 pl-3 border-l border-cadence-border">
+            <img id="user-avatar" class="w-7 h-7 rounded-full border border-cadence-border object-cover" src="" alt="Avatar">
+            <span id="user-name" class="text-xs font-medium text-cadence-charcoal hidden sm:inline max-w-[120px] truncate">User</span>
+            <button onclick="logout()" title="Sign Out" class="p-1 hover:text-red-600 text-cadence-slate transition">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
           </div>
-        `;
-        return;
-      }
+        </div>
+      </div>
+    </header>
 
-      if (!currentEmp.visitPlan) currentEmp.visitPlan = [];
-      const completedCount = currentEmp.visitPlan.filter(t => t.completed).length;
-      const totalCount = currentEmp.visitPlan.length;
-
-      dossierPanel.innerHTML = `
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-3.5">
-              <div class="w-12 h-12 rounded-xl bg-bone-150 border border-nordic-border flex items-center justify-center font-bold text-base text-charcoal-900">
-                ${currentEmp.initials}
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h2 class="text-base font-bold text-charcoal-900">${currentEmp.name}</h2>
-                  <span class="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800">${currentEmp.rhythmStatus || 'Active'}</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5 text-xs text-nordic-slate">
-                  <span>${currentEmp.role} · ${currentEmp.department}</span>
-                  <span class="text-charcoal-900/20">|</span>
-                  <span class="inline-flex items-center gap-1 font-medium text-charcoal-800">
-                    <i data-lucide="map-pin" class="w-3 h-3 text-nordic-blue"></i>
-                    ${currentEmp.location}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <button onclick="showToast('Google Drive path: /Coaching/${currentEmp.location}/${currentEmp.name}/')" class="px-3 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-150 border border-nordic-border text-xs font-medium text-charcoal-900 flex items-center gap-2 transition-colors">
-                <i data-lucide="folder" class="w-3.5 h-3.5 text-amber-600"></i>
-                <span>Drive Folder</span>
-              </button>
-              <button onclick="deleteEmployee(${currentEmp.id})" class="p-1.5 rounded-lg hover:bg-red-50 text-nordic-muted hover:text-red-600 border border-nordic-border" title="Remove Member">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </div>
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
+      
+      <!-- OVERVIEW VIEW -->
+      <div id="view-overview" class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Executive Summary</h1>
+            <p class="text-xs text-cadence-slate mt-1">Cross-dealership performance, coaching frequency, and live deliverables.</p>
           </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div class="p-3 rounded-xl bg-emerald-50/50 border border-emerald-900/10 space-y-1">
-              <span class="font-semibold text-emerald-900 flex items-center gap-1">
-                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-700"></i> Documented Wins
-              </span>
-              <p class="text-nordic-slate leading-relaxed">${currentEmp.recentWins || 'Baseline onboarding initialized.'}</p>
-            </div>
-            <div class="p-3 rounded-xl bg-amber-50/40 border border-amber-900/10 space-y-1">
-              <span class="font-semibold text-amber-900 flex items-center gap-1">
-                <i data-lucide="target" class="w-3.5 h-3.5 text-amber-700"></i> Development Commitment
-              </span>
-              <p class="text-nordic-slate leading-relaxed">${currentEmp.growthFocus || 'Define focus in coaching debrief.'}</p>
-            </div>
+          <div class="flex items-center gap-2">
+            <button onclick="switchView('pipeline')" class="px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">View Pipeline</button>
+            <button onclick="switchView('coaching')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Manage Locations & Visits</button>
           </div>
         </div>
 
-        <!-- Next Visit Coaching Plan Card -->
-        <div class="p-5 rounded-2xl bg-white border border-nordic-border shadow-card space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-nordic-border pb-3">
-            <div>
-              <div class="flex items-center gap-2">
-                <i data-lucide="clipboard-check" class="w-4 h-4 text-nordic-blue"></i>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-charcoal-900">Next Visit Coaching Plan</h3>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full ${completedCount === totalCount && totalCount > 0 ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-bone-150 text-charcoal-800'}">
-                  ${completedCount} / ${totalCount} Done
-                </span>
-              </div>
-              <p class="text-[11px] text-nordic-slate mt-0.5">Tasks, observation agenda, and drills for your upcoming visit at ${currentEmp.location}</p>
-            </div>
+        <!-- Metrics -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Deliverables</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-charcoal" id="stat-active-tasks">0 In Flight</div>
+            <div class="text-xs text-cadence-slate mt-1">Priority manager action items</div>
+          </div>
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Coaching Cadence</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-green">94% Target</div>
+            <div class="text-xs text-cadence-slate mt-1">Bi-weekly cadence rhythm</div>
+          </div>
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Facilities</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-accent" id="stat-locations-count">0 Facilities</div>
+            <div class="text-xs text-cadence-slate mt-1">OEM, Used, & Service Facilities</div>
+          </div>
+        </div>
 
-            <button onclick="suggestVisitPlanWithGemini('${currentEmp.name}', '${currentEmp.role}')" class="px-2.5 py-1.5 rounded-lg bg-bone-100 hover:bg-bone-200 border border-nordic-border text-charcoal-900 text-xs font-medium flex items-center gap-1.5 transition-colors self-start sm:self-auto">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
-              <span>Gemini Suggest</span>
-            </button>
+        <!-- Facility Cards -->
+        <div class="bg-white border border-cadence-border rounded-xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Location Health & Assigned Staff</h2>
+            <button onclick="promptAddLocation()" class="text-xs text-cadence-accent font-semibold hover:underline">+ New Facility</button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="overview-stores-container">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE VIEW -->
+      <div id="view-pipeline" class="hidden space-y-6">
+        <div class="flex items-center justify-between pb-4 border-b border-cadence-border">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Personal Pipeline</h1>
+            <p class="text-xs text-cadence-slate mt-1">High-priority leadership items, reviews, and store deliverables.</p>
+          </div>
+          <button onclick="promptAddTask()" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ New Task</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="pipeline-board">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- COACHING & ROSTER VIEW -->
+      <div id="view-coaching" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Coaching & Team Roster</h1>
+            <p class="text-xs text-cadence-slate mt-1">Store rosters, individual growth dossiers, and visit drill tracking.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="promptAddLocation()" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">+ New Location</button>
+            <button onclick="promptAddMember()" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add Member</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 space-y-4" id="roster-list">
+            <!-- Dynamic staff grouping -->
+          </div>
+          <div class="lg:col-span-7" id="employee-dossier-card">
+            <!-- Active Dossier & Next Visit Plans -->
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE FEED VIEW -->
+      <div id="view-workspace" class="hidden space-y-6">
+        <div class="pb-4 border-b border-cadence-border">
+          <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Workspace Integration</h1>
+          <p class="text-xs text-cadence-slate mt-1">Direct Gmail action items and Google Calendar synchronization.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white border border-cadence-border rounded-xl p-5">
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cadence-charcoal mb-4">
+              <i data-lucide="mail" class="w-4 h-4 text-cadence-accent"></i>
+              <span>Actionable Email Threads</span>
+            </div>
+            <div class="space-y-3">
+              <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg">
+                <div class="text-xs font-bold text-cadence-charcoal">Training Matrix Review Request</div>
+                <div class="text-[11px] text-cadence-slate mt-1">"Can you review the observation criteria before tomorrow's visit?"</div>
+                <button onclick="addTask('Review observation criteria from email', 'Email Action')" class="mt-2 text-[10px] font-semibold px-2.5 py-1 bg-white border border-cadence-border rounded hover:bg-cadence-sand transition">+ Push to Pipeline</button>
+              </div>
+            </div>
           </div>
 
-          <div class="space-y-2">
-            ${currentEmp.visitPlan.length === 0 ? `
-              <div class="p-4 rounded-xl border border-dashed border-nordic-border bg-bone-50 text-center text-xs text-nordic-muted">
-                No visit tasks defined yet. Add items below to prepare your coaching agenda for ${currentEmp.name}.
+          <div class="bg-white border border-cadence-border rounded-xl p-5">
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cadence-charcoal mb-4">
+              <i data-lucide="calendar" class="w-4 h-4 text-cadence-accent"></i>
+              <span>Google Calendar Visits</span>
+            </div>
+            <div class="space-y-3">
+              <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-cadence-charcoal">Facility Walk & 1-on-1 Observation</div>
+                  <div class="text-[11px] text-cadence-slate mt-0.5">Thursday at 9:00 AM</div>
+                </div>
+                <span class="text-[10px] font-medium px-2 py-0.5 bg-cadence-sand rounded text-cadence-charcoal">Synced</span>
               </div>
-            ` : currentEmp.visitPlan.map(item => `
-              <div class="p-3 rounded-xl border transition-all ${item.completed ? 'bg-bone-100/60 border-nordic-border opacity-70' : 'bg-bone-50 hover:bg-white border-nordic-border shadow-subtle'} flex items-center justify-between gap-3 text-xs">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                  <button onclick="toggleVisitPlanTask(${currentEmp.id}, ${item.id})" class="w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${item.completed ? 'bg-charcoal-900 border-charcoal-900 text-white' : 'border-nordic-border hover:border-charcoal-900 bg-white'}">
-                    ${item.completed ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
-                  </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
 
-                  <div class="min-w-0">
-                    <p class="font-medium text-charcoal-900 ${item.completed ? 'line-through text-nordic-muted' : ''} leading-snug">
-                      ${item.task}
-                    </p>
-                    <div class="flex items-center gap-2 mt-0.5 text-[10.5px] text-nordic-muted">
-                      <span class="px-1.5 py-0.2 rounded font-medium ${
-                        item.category === 'Observation Drill' ? 'bg-blue-50 text-blue-700' :
-                        item.category === 'Skill Practice' ? 'bg-amber-50 text-amber-800' :
-                        'bg-bone-200 text-charcoal-700'
-                      }">${item.category}</span>
-                      <span>· ${item.targetDate || 'Next Visit'}</span>
-                    </div>
+    <!-- GEMINI COPILOT DRAWER -->
+    <aside id="copilot-drawer" class="fixed inset-y-0 right-0 w-96 max-w-full bg-white border-l border-cadence-border shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+      <div class="p-4 border-b border-cadence-border flex items-center justify-between bg-cadence-canvas">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4 text-cadence-accent"></i>
+          <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Cadence Copilot</span>
+        </div>
+        <button onclick="toggleCopilot()" class="p-1 rounded hover:bg-cadence-sand transition">
+          <i data-lucide="x" class="w-4 h-4 text-cadence-slate"></i>
+        </button>
+      </div>
+      <div id="copilot-messages" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll text-xs">
+        <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal">
+          Hello! I can generate dealership observation drills, summarize coaching history, or organize your visit plans. What would you like to review?
+        </div>
+      </div>
+      <div class="p-3 border-t border-cadence-border flex gap-2">
+        <input id="copilot-input" type="text" placeholder="Ask Cadence Copilot..." class="flex-1 text-xs px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') sendCopilot()">
+        <button onclick="sendCopilot()" class="px-3 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Send</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- APPLICATION CONTROLLER SCRIPT -->
+  <script>
+    function renderAll() {
+      renderOverview();
+      renderPipeline();
+      renderRoster();
+      lucide.createIcons();
+    }
+    window.renderAll = renderAll;
+
+    function switchView(viewName) {
+      ['overview', 'pipeline', 'coaching', 'workspace'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.add('hidden');
+        const btn = document.getElementById(`nav-btn-${v}`);
+        if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors';
+      });
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`nav-btn-${viewName}`);
+      if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors';
+      lucide.createIcons();
+    }
+    window.switchView = switchView;
+
+    function renderOverview() {
+      const container = document.getElementById('overview-stores-container');
+      const state = window.cadenceState;
+      if (!container) return;
+
+      container.innerHTML = state.locations.map(loc => {
+        const staff = state.employees.filter(e => e.locId === loc.id);
+        return `
+          <div class="p-4 bg-cadence-canvas border border-cadence-border rounded-lg hover:border-cadence-charcoal transition cursor-pointer" onclick="switchView('coaching'); selectEmployee('${staff[0]?.id || ''}')">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-cadence-charcoal">${loc.name}</span>
+              <span class="text-[10px] px-2 py-0.5 bg-cadence-sand rounded text-cadence-charcoal">${loc.type}</span>
+            </div>
+            <div class="text-[11px] text-cadence-slate mt-2">${staff.length} Team Members</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('stat-locations-count').textContent = `${state.locations.length} Facilities`;
+      const inFlightCount = state.tasks.filter(t => t.stage === 'in-flight').length;
+      document.getElementById('stat-active-tasks').textContent = `${inFlightCount} In Flight`;
+    }
+
+    function renderPipeline() {
+      const board = document.getElementById('pipeline-board');
+      const state = window.cadenceState;
+      if (!board) return;
+
+      const cols = [
+        { id: 'next', label: 'Next Focus' },
+        { id: 'in-flight', label: 'In Flight' },
+        { id: 'done', label: 'Completed' }
+      ];
+
+      board.innerHTML = cols.map(col => {
+        const colTasks = state.tasks.filter(t => t.stage === col.id);
+        return `
+          <div class="bg-white border border-cadence-border rounded-xl p-4 flex flex-col min-h-[350px]">
+            <div class="flex items-center justify-between pb-3 border-b border-cadence-border mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">${col.label}</span>
+              <span class="text-xs text-cadence-slate">${colTasks.length}</span>
+            </div>
+            <div class="space-y-2 flex-1">
+              ${colTasks.map(t => `
+                <div class="p-3 bg-cadence-canvas border border-cadence-border rounded-lg text-xs shadow-2xs">
+                  <div class="font-medium text-cadence-charcoal">${t.text}</div>
+                  <div class="flex items-center justify-between mt-2 pt-2 border-t border-cadence-border/60">
+                    <span class="text-[10px] text-cadence-slate uppercase font-semibold">${t.tag}</span>
+                    <button onclick="advanceTask('${t.id}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Advance →</button>
                   </div>
                 </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <button onclick="syncVisitTaskToPipeline(${currentEmp.id}, ${item.id})" class="px-2 py-1 rounded bg-white hover:bg-bone-100 border border-nordic-border text-[11px] text-charcoal-800 font-medium flex items-center gap-1 transition-colors">
-                    <i data-lucide="plus" class="w-3 h-3"></i>
-                    <span>Pipeline</span>
-                  </button>
-                  <button onclick="deleteVisitPlanTask(${currentEmp.id}, ${item.id})" class="p-1 rounded text-nordic-muted hover:text-red-600 hover:bg-bone-150 transition-colors">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
+    function advanceTask(id) {
+      const t = window.cadenceState.tasks.find(x => x.id === id);
+      if (!t) return;
+      if (t.stage === 'next') t.stage = 'in-flight';
+      else if (t.stage === 'in-flight') t.stage = 'done';
+      else if (t.stage === 'done') t.stage = 'next';
+      window.saveState();
+      renderPipeline();
+    }
+    window.advanceTask = advanceTask;
+
+    function addTask(text, tag) {
+      window.cadenceState.tasks.push({ id: 't-' + Date.now(), text, stage: 'next', tag: tag || 'General' });
+      window.saveState();
+      renderPipeline();
+      switchView('pipeline');
+    }
+    window.addTask = addTask;
+
+    function promptAddTask() {
+      const text = prompt('Task or Deliverable Name:');
+      if (text) addTask(text, 'Manual');
+    }
+    window.promptAddTask = promptAddTask;
+
+    function renderRoster() {
+      const list = document.getElementById('roster-list');
+      const state = window.cadenceState;
+      if (!list) return;
+
+      list.innerHTML = state.locations.map(loc => {
+        const members = state.employees.filter(e => e.locId === loc.id);
+        return `
+          <div class="bg-white border border-cadence-border rounded-xl p-4">
+            <div class="flex items-center justify-between pb-2 border-b border-cadence-border mb-3">
+              <span class="text-xs font-bold text-cadence-charcoal">${loc.name}</span>
+              <span class="text-[10px] text-cadence-slate uppercase">${loc.type}</span>
+            </div>
+            <div class="space-y-1.5">
+              ${members.length > 0 ? members.map(m => `
+                <div onclick="selectEmployee('${m.id}')" class="p-2.5 rounded-lg cursor-pointer transition flex items-center justify-between ${state.selectedEmpId === m.id ? 'bg-cadence-sandLight border border-cadence-charcoal/20 font-semibold' : 'hover:bg-cadence-canvas text-cadence-slate'}">
+                  <span class="text-xs text-cadence-charcoal">${m.name}</span>
+                  <span class="text-[11px] text-cadence-slate">${m.role}</span>
                 </div>
-              </div>
-            `).join('')}
+              `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No team members assigned</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      renderDossier();
+    }
+
+    function selectEmployee(id) {
+      window.cadenceState.selectedEmpId = id;
+      renderRoster();
+    }
+    window.selectEmployee = selectEmployee;
+
+    function renderDossier() {
+      const state = window.cadenceState;
+      const emp = state.employees.find(e => e.id === state.selectedEmpId);
+      const card = document.getElementById('employee-dossier-card');
+      if (!card) return;
+
+      if (!emp) {
+        card.innerHTML = `<div class="p-8 text-center text-xs text-cadence-slate bg-white border border-cadence-border rounded-xl">Select a team member to view their dossier.</div>`;
+        return;
+      }
+
+      const loc = state.locations.find(l => l.id === emp.locId);
+      const plans = state.visitPlans[emp.id] || [];
+
+      card.innerHTML = `
+        <div class="bg-white border border-cadence-border rounded-xl p-6 space-y-6">
+          <div class="flex items-start justify-between pb-4 border-b border-cadence-border">
+            <div>
+              <h2 class="text-xl font-bold text-cadence-charcoal">${emp.name}</h2>
+              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name} (${loc?.type})</p>
+            </div>
+            <span class="text-[10px] font-semibold px-2.5 py-1 bg-cadence-sand rounded text-cadence-charcoal">Drive Dossier</span>
           </div>
 
-          <!-- Inline Task Composer -->
-          <form onsubmit="handleInlineAddVisitTask(event, ${currentEmp.id})" class="pt-2 border-t border-nordic-border flex flex-col sm:flex-row items-stretch sm:items-center gap-2 text-xs">
-            <input type="text" id="input-new-visit-task" required placeholder="Add task or observation drill for next visit with ${currentEmp.name}..." class="flex-1 px-3 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 focus:outline-none text-xs" />
-            <select id="select-new-visit-category" class="px-2.5 py-2 rounded-lg bg-bone-50 border border-nordic-border focus:border-charcoal-900 text-xs">
-              <option value="Observation Drill">Observation Drill</option>
-              <option value="Skill Practice">Skill Practice</option>
-              <option value="Process & CRM">Process & CRM</option>
-              <option value="Review Target">Review Target</option>
-            </select>
-            <button type="submit" class="px-3.5 py-2 rounded-lg bg-charcoal-900 hover:bg-charcoal-800 text-white font-medium flex items-center justify-center gap-1.5 transition-colors shadow-subtle shrink-0">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>Add to Plan</span>
-            </button>
-          </form>
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-cadence-slate mb-1">Developmental Focus</div>
+            <div class="p-3 bg-cadence-canvas border border-cadence-border rounded-lg text-xs text-cadence-charcoal">${emp.goal}</div>
+          </div>
+
+          <div class="border border-cadence-border rounded-xl p-4 bg-cadence-sandLight/50">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Next Visit Coaching Plan</span>
+                <p class="text-[11px] text-cadence-slate">Observation drills & targets for next facility walk.</p>
+              </div>
+              <button onclick="suggestVisitDrills('${emp.name}', '${emp.goal}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i> Gemini Suggest
+              </button>
+            </div>
+
+            <div class="space-y-2 mb-3">
+              ${plans.length > 0 ? plans.map(p => `
+                <div class="flex items-center justify-between p-2.5 bg-white border border-cadence-border rounded-lg text-xs">
+                  <div class="flex items-center gap-2.5">
+                    <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlan('${emp.id}', '${p.id}')" class="rounded border-cadence-border text-cadence-charcoal focus:ring-0">
+                    <span class="${p.done ? 'line-through text-cadence-slate' : 'text-cadence-charcoal font-medium'}">${p.text}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-cadence-slate bg-cadence-canvas px-2 py-0.5 rounded border border-cadence-border">${p.type}</span>
+                    <button onclick="addTask('Follow up with ${emp.name}: ${p.text}', '${loc?.name}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Sync</button>
+                  </div>
+                </div>
+              `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No drills scheduled yet.</div>'}
+            </div>
+
+            <div class="flex gap-2">
+              <input id="input-new-visit-task" type="text" placeholder="Add observation drill..." class="flex-1 text-xs px-3 py-2 bg-white border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') addVisitTask('${emp.id}')">
+              <button onclick="addVisitTask('${emp.id}')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add</button>
+            </div>
+          </div>
         </div>
       `;
       lucide.createIcons();
     }
 
-    // Modal Actions
-    function openNewLocationModal() {
-      document.getElementById('modal-new-location').classList.remove('hidden');
-      document.getElementById('modal-new-location').classList.add('flex');
+    function togglePlan(empId, planId) {
+      const p = (window.cadenceState.visitPlans[empId] || []).find(x => x.id === planId);
+      if (p) p.done = !p.done;
+      window.saveState();
+      renderDossier();
     }
-    function closeNewLocationModal() {
-      document.getElementById('modal-new-location').classList.add('hidden');
-      document.getElementById('modal-new-location').classList.remove('flex');
-    }
+    window.togglePlan = togglePlan;
 
-    function updateLocationDrivePreview(name) {
-      const clean = name.trim() || '[Location Name]';
-      document.getElementById('loc-drive-preview').textContent = `Drive/Coaching Records/${clean}/`;
-    }
-
-    function handleCreateLocation(e) {
-      e.preventDefault();
-      const name = document.getElementById('loc-input-name').value.trim();
-      const type = document.getElementById('loc-input-type').value;
-      if (!name) return;
-
-      if (!storeLocations.some(l => l.name.toLowerCase() === name.toLowerCase())) {
-        storeLocations.push({ id: Date.now(), name, type });
-        selectedLocationFilter = name;
-        saveUserData();
-        closeNewLocationModal();
-        refreshAllViews();
-        showToast(`Created location "${name}"`);
-      } else {
-        alert("A location with this name already exists.");
-      }
-    }
-
-    function openNewEmployeeModal() {
-      if (storeLocations.length === 0) {
-        alert("Please create at least one store location first.");
-        openNewLocationModal();
-        return;
-      }
-      document.getElementById('modal-new-employee').classList.remove('hidden');
-      document.getElementById('modal-new-employee').classList.add('flex');
-    }
-    function openNewEmployeeModalForLocation(locName) {
-      openNewEmployeeModal();
-      document.getElementById('emp-input-location-select').value = locName;
-    }
-    function closeNewEmployeeModal() {
-      document.getElementById('modal-new-employee').classList.add('hidden');
-      document.getElementById('modal-new-employee').classList.remove('flex');
-    }
-
-    function handleCreateEmployee(e) {
-      e.preventDefault();
-      const name = document.getElementById('emp-input-name').value.trim();
-      const role = document.getElementById('emp-input-role').value.trim();
-      const dept = document.getElementById('emp-input-dept').value;
-      const location = document.getElementById('emp-input-location-select').value;
-      const initials = name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'TM';
-
-      const newEmp = {
-        id: Date.now(),
-        name,
-        role,
-        department: dept,
-        location,
-        initials,
-        rhythmStatus: "Active",
-        lastSession: "Registered",
-        recentWins: "Onboarding record initialized.",
-        growthFocus: "Baseline skill practice scheduled.",
-        visitPlan: [],
-        history: []
-      };
-
-      teamMembers.push(newEmp);
-      selectedEmployeeId = newEmp.id;
-      saveUserData();
-      closeNewEmployeeModal();
-      refreshAllViews();
-      showToast(`Added ${name} to ${location}`);
-    }
-
-    function deleteEmployee(empId) {
-      if (confirm("Are you sure you want to remove this team member?")) {
-        teamMembers = teamMembers.filter(e => e.id !== empId);
-        selectedEmployeeId = teamMembers.length > 0 ? teamMembers[0].id : null;
-        saveUserData();
-        refreshAllViews();
-        showToast("Team member removed");
-      }
-    }
-
-    function handleInlineAddVisitTask(e, empId) {
-      e.preventDefault();
+    function addVisitTask(empId) {
       const input = document.getElementById('input-new-visit-task');
-      const category = document.getElementById('select-new-visit-category').value;
-      const taskText = input.value.trim();
-      if (!taskText) return;
-
-      const emp = teamMembers.find(m => m.id === empId);
-      if (!emp) return;
-      if (!emp.visitPlan) emp.visitPlan = [];
-
-      emp.visitPlan.push({
-        id: Date.now(),
-        task: taskText,
-        category,
-        targetDate: "Next Visit",
-        completed: false
+      if (!input || !input.value.trim()) return;
+      if (!window.cadenceState.visitPlans[empId]) window.cadenceState.visitPlans[empId] = [];
+      window.cadenceState.visitPlans[empId].push({
+        id: 'vp-' + Date.now(),
+        text: input.value.trim(),
+        done: false,
+        type: 'Skill Practice'
       });
-
       input.value = '';
-      saveUserData();
-      renderCoachingView();
-      renderDashboard();
-      showToast("Added task to visit plan");
+      window.saveState();
+      renderDossier();
     }
+    window.addVisitTask = addVisitTask;
 
-    function toggleVisitPlanTask(empId, taskId) {
-      const emp = teamMembers.find(m => m.id === empId);
-      if (!emp || !emp.visitPlan) return;
-      const task = emp.visitPlan.find(t => t.id === taskId);
-      if (task) {
-        task.completed = !task.completed;
-        saveUserData();
-        renderCoachingView();
-        renderDashboard();
-      }
+    function promptAddLocation() {
+      const name = prompt('Dealership or Facility Name:');
+      if (!name) return;
+      const type = prompt('Facility Type (OEM Dealership, Used Car Dealership, or Service Centre):') || 'OEM Dealership';
+      window.cadenceState.locations.push({ id: 'loc-' + Date.now(), name, type });
+      window.saveState();
+      renderOverview();
+      renderRoster();
     }
+    window.promptAddLocation = promptAddLocation;
 
-    function deleteVisitPlanTask(empId, taskId) {
-      const emp = teamMembers.find(m => m.id === empId);
-      if (!emp || !emp.visitPlan) return;
-      emp.visitPlan = emp.visitPlan.filter(t => t.id !== taskId);
-      saveUserData();
-      renderCoachingView();
-      renderDashboard();
-      showToast("Visit task removed");
+    function promptAddMember() {
+      const name = prompt('Team Member Name:');
+      if (!name) return;
+      const role = prompt('Role/Title:') || 'Sales Consultant';
+      const locId = window.cadenceState.locations[0]?.id || 'loc-1';
+      const empId = 'emp-' + Date.now();
+      window.cadenceState.employees.push({ id: empId, name, role, locId, goal: 'Master customer experience & dealership sales process.' });
+      window.cadenceState.visitPlans[empId] = [];
+      window.saveState();
+      selectEmployee(empId);
+      renderOverview();
     }
-
-    function syncVisitTaskToPipeline(empId, taskId) {
-      const emp = teamMembers.find(m => m.id === empId);
-      if (!emp || !emp.visitPlan) return;
-      const visitTask = emp.visitPlan.find(t => t.id === taskId);
-      if (!visitTask) return;
-
-      pipelineTasks.unshift({
-        id: Date.now(),
-        title: `${visitTask.task} [${emp.name} · ${emp.location}]`,
-        stage: "next",
-        category: "Coaching",
-        employee: emp.name,
-        date: "Next Visit"
-      });
-
-      saveUserData();
-      renderPipeline();
-      renderDashboard();
-      showToast(`Synced "${visitTask.task}" to Pipeline`);
-    }
-
-    // Pipeline Tasks Modals
-    function openNewTaskModal() {
-      document.getElementById('modal-new-task').classList.remove('hidden');
-      document.getElementById('modal-new-task').classList.add('flex');
-    }
-    function closeNewTaskModal() {
-      document.getElementById('modal-new-task').classList.add('hidden');
-      document.getElementById('modal-new-task').classList.remove('flex');
-    }
-
-    function handleCreateTask(e) {
-      e.preventDefault();
-      const title = document.getElementById('task-input-title').value.trim();
-      const column = document.getElementById('task-input-column').value;
-      const category = document.getElementById('task-input-category').value;
-      const emp = document.getElementById('task-input-employee').value;
-
-      pipelineTasks.unshift({
-        id: Date.now(),
-        title,
-        stage: column,
-        category,
-        employee: emp === 'None' ? null : emp,
-        date: "Today"
-      });
-
-      document.getElementById('task-input-title').value = '';
-      saveUserData();
-      closeNewTaskModal();
-      renderPipeline();
-      renderDashboard();
-      showToast("Deliverable added to pipeline");
-    }
-
-    // Coaching Session Logging
-    function openNewCoachingModal() {
-      if (teamMembers.length === 0) {
-        alert("Please add at least one team member to your roster first.");
-        switchView('coaching');
-        return;
-      }
-      document.getElementById('modal-new-coaching').classList.remove('hidden');
-      document.getElementById('modal-new-coaching').classList.add('flex');
-    }
-    function closeNewCoachingModal() {
-      document.getElementById('modal-new-coaching').classList.add('hidden');
-      document.getElementById('modal-new-coaching').classList.remove('flex');
-    }
-
-    function handleCreateCoaching(e) {
-      e.preventDefault();
-      const empName = document.getElementById('coach-employee-select').value;
-      const framework = document.getElementById('coach-framework-select').value;
-      const wins = document.getElementById('coach-wins-input').value.trim() || 'Observed milestone progression.';
-      const focus = document.getElementById('coach-focus-input').value.trim() || 'Follow-up drills agreed.';
-
-      const emp = teamMembers.find(m => m.name === empName);
-      if (emp) {
-        emp.recentWins = wins;
-        emp.growthFocus = focus;
-        emp.lastSession = "Today";
-      }
-
-      recentDossiers.unshift({
-        id: Date.now(),
-        employee: empName,
-        type: framework,
-        doc: `${empName.replace(/\s+/g, '_')}_Debrief.gdoc`,
-        date: "Today"
-      });
-
-      saveUserData();
-      closeNewCoachingModal();
-      refreshAllViews();
-      showToast(`Logged session for ${empName}`);
-    }
-
-    function convertEmailToTask(text) {
-      pipelineTasks.unshift({
-        id: Date.now(),
-        title: text,
-        stage: "next",
-        category: "Workspace",
-        employee: null,
-        date: "Today"
-      });
-      saveUserData();
-      renderPipeline();
-      renderDashboard();
-      showToast("Converted email to Pipeline task");
-      switchView('pipeline');
-    }
-
-    function cloneTemplateToDoc(templateName) {
-      showToast(`Initialized "${templateName}" document in Drive`);
-      openNewCoachingModal();
-    }
-
-    function updateEmployeeDropdowns() {
-      const taskEmpSelect = document.getElementById('task-input-employee');
-      if (taskEmpSelect) {
-        taskEmpSelect.innerHTML = `<option value="None">None (General Deliverable)</option>`;
-        teamMembers.forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = m.name;
-          opt.textContent = `${m.name} (${m.location})`;
-          taskEmpSelect.appendChild(opt);
-        });
-      }
-
-      const coachEmpSelect = document.getElementById('coach-employee-select');
-      if (coachEmpSelect) {
-        coachEmpSelect.innerHTML = '';
-        teamMembers.forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = m.name;
-          opt.textContent = `${m.name} (${m.location} · ${m.role})`;
-          coachEmpSelect.appendChild(opt);
-        });
-      }
-
-      const modalLocSelect = document.getElementById('emp-input-location-select');
-      if (modalLocSelect) {
-        modalLocSelect.innerHTML = '';
-        storeLocations.forEach(loc => {
-          const opt = document.createElement('option');
-          opt.value = loc.name;
-          opt.textContent = `${loc.name} (${loc.type})`;
-          modalLocSelect.appendChild(opt);
-        });
-      }
-    }
-
-    // Settings & Gemini API Key Management
-    function openSettingsModal() {
-      document.getElementById('input-gemini-key').value = geminiApiKey;
-      document.getElementById('modal-settings').classList.remove('hidden');
-      document.getElementById('modal-settings').classList.add('flex');
-    }
-    function closeSettingsModal() {
-      document.getElementById('modal-settings').classList.add('hidden');
-      document.getElementById('modal-settings').classList.remove('flex');
-    }
-
-    function handleSaveSettings(e) {
-      e.preventDefault();
-      geminiApiKey = document.getElementById('input-gemini-key').value.trim();
-      localStorage.setItem('cadence_gemini_api_key', geminiApiKey);
-      updateKeyBadge();
-      closeSettingsModal();
-      showToast("Gemini API Key saved");
-    }
-
-    function updateKeyBadge() {
-      const badge = document.getElementById('gemini-key-status');
-      if (geminiApiKey) {
-        badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium";
-        badge.textContent = "Gemini Key Connected";
-      } else {
-        badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-medium";
-        badge.textContent = "AI Key Optional";
-      }
-    }
-
-    // Live Gemini AI Engine (calls Google Gemini API directly)
-    async function callGeminiLive(prompt) {
-      if (!geminiApiKey) {
-        // High quality grounded fallback if user hasn't provided key yet
-        return `[Offline Grounding]: ${mockGeminiResponse(prompt)}`;
-      }
-
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `You are Cadence, an executive leadership and dealership training assistant. Provide concise, Scandinavian-minimalist, direct advice.\nContext:\n- Stores: ${JSON.stringify(storeLocations)}\n- Staff: ${JSON.stringify(teamMembers.map(m=>({name:m.name, role:m.role, loc:m.location, focus:m.growthFocus})))}\n\nUser Question: ${prompt}`
-              }]
-            }]
-          })
-        });
-
-        const data = await response.json();
-        return data.candidates[0].content.parts[0].text;
-      } catch (err) {
-        console.error("Gemini API call failed:", err);
-        return `Gemini API connection error. Check your API key in Settings. (${err.message})`;
-      }
-    }
-
-    function mockGeminiResponse(prompt) {
-      if (prompt.toLowerCase().includes('plan') || prompt.toLowerCase().includes('visit')) {
-        return "Recommended Visit Cadence:\n1. 10:00 AM Showroom walkaround observation.\n2. 10:30 AM CRM inquiry response audit.\n3. 11:00 AM 1-on-1 objection framing practice.";
-      }
-      return "Cadence has cross-referenced your roster and store facilities. Prioritize shadow reviews for upcoming customer handoffs.";
-    }
+    window.promptAddMember = promptAddMember;
 
     function toggleCopilot() {
-      document.getElementById('copilot-drawer').classList.toggle('translate-x-full');
+      const drawer = document.getElementById('copilot-drawer');
+      drawer.classList.toggle('translate-x-full');
     }
+    window.toggleCopilot = toggleCopilot;
 
-    function sendQuickCopilotPrompt(text) {
-      document.getElementById('copilot-input').value = text;
-      handleCopilotSubmit(new Event('submit'));
-    }
-
-    function suggestVisitPlanWithGemini(empName, empRole) {
-      toggleCopilot();
-      document.getElementById('copilot-input').value = `Recommend 3 specific observation drills for my next store visit with ${empName} (${empRole})`;
-      handleCopilotSubmit(new Event('submit'));
-    }
-
-    async function handleCopilotSubmit(e) {
-      if (e) e.preventDefault();
+    function sendCopilot() {
       const input = document.getElementById('copilot-input');
-      const messages = document.getElementById('copilot-chat-messages');
-      const userText = input.value.trim();
-      if (!userText) return;
+      const text = input.value.trim();
+      if (!text) return;
+      const container = document.getElementById('copilot-messages');
+      container.innerHTML += `<div class="p-2.5 bg-cadence-canvas border border-cadence-border rounded-lg text-cadence-charcoal self-end text-right font-medium">${text}</div>`;
       input.value = '';
 
-      const userBubble = document.createElement('div');
-      userBubble.className = "p-3 rounded-xl bg-charcoal-900 text-white self-end ml-8 text-xs leading-relaxed";
-      userBubble.innerHTML = `<p>${userText}</p>`;
-      messages.appendChild(userBubble);
-      messages.scrollTop = messages.scrollHeight;
-
-      const thinkingBubble = document.createElement('div');
-      thinkingBubble.className = "p-3 rounded-xl bg-bone-100 border border-nordic-border text-nordic-slate flex items-center gap-2 text-xs";
-      thinkingBubble.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Gemini is generating response...</span>`;
-      messages.appendChild(thinkingBubble);
-      lucide.createIcons();
-      messages.scrollTop = messages.scrollHeight;
-
-      const reply = await callGeminiLive(userText);
-      thinkingBubble.remove();
-
-      const aiBubble = document.createElement('div');
-      aiBubble.className = "p-3.5 rounded-xl bg-bone-50 border border-nordic-border space-y-2 text-xs text-charcoal-900 whitespace-pre-line";
-      aiBubble.textContent = reply;
-      messages.appendChild(aiBubble);
-      messages.scrollTop = messages.scrollHeight;
+      setTimeout(() => {
+        container.innerHTML += `<div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal">Understood. I will help track and align these objectives with your coaching cadence.</div>`;
+        container.scrollTop = container.scrollHeight;
+      }, 500);
     }
+    window.sendCopilot = sendCopilot;
 
-    async function generateLiveGeminiBriefing() {
-      const briefEl = document.getElementById('dash-ai-summary');
-      briefEl.textContent = "Gemini is analyzing your store roster and pipeline rhythm...";
-      const result = await callGeminiLive("Provide a crisp 2-sentence morning operational briefing based on our stores and active team members.");
-      briefEl.textContent = result;
+    function suggestVisitDrills(empName, goal) {
+      toggleCopilot();
+      const container = document.getElementById('copilot-messages');
+      container.innerHTML += `
+        <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal space-y-2">
+          <div class="font-bold">Suggested Drills for ${empName}:</div>
+          <div>Focus area: "<em>${goal}</em>"</div>
+          <ul class="list-disc pl-4 space-y-1">
+            <li><strong>Customer Discovery Drill:</strong> Observe qualification questions on walk-in consultations.</li>
+            <li><strong>Objection Turnaround:</strong> Shadow trade-in appraisal consultation review.</li>
+          </ul>
+          <button onclick="addTask('Conduct discovery drills with ${empName}', 'Coaching')" class="mt-2 text-[10px] font-semibold px-2 py-1 bg-cadence-charcoal text-white rounded">+ Add to Pipeline</button>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
     }
+    window.suggestVisitDrills = suggestVisitDrills;
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadence — Executive & Dealership Cockpit</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-    // Command Palette (⌘K)
-    function openCommandPalette() {
-      document.getElementById('modal-cmd').classList.remove('hidden');
-      document.getElementById('modal-cmd').classList.add('flex');
-      document.getElementById('cmd-input').focus();
-    }
-    function closeCommandPalette() {
-      document.getElementById('modal-cmd').classList.add('hidden');
-      document.getElementById('modal-cmd').classList.remove('flex');
-    }
-    function handleCmdBackdrop(e) {
-      if (e.target.id === 'modal-cmd') closeCommandPalette();
-    }
-    function filterCommandPalette(q) {
-      const query = q.toLowerCase();
-      const results = document.getElementById('cmd-results');
-      Array.from(results.children).forEach(child => {
-        child.classList.toggle('hidden', !child.textContent.toLowerCase().includes(query));
-      });
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        openCommandPalette();
+  <!-- Tailwind Configuration matching Scandinavian / Apple Aesthetic -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cadence: {
+              canvas: '#F9F9F7',
+              surface: '#FFFFFF',
+              charcoal: '#121417',
+              slate: '#5A6068',
+              border: 'rgba(28, 32, 40, 0.08)',
+              sand: '#EFECE6',
+              sandLight: '#F5F3EF',
+              accent: '#183884',
+              accentHover: '#132C69',
+              green: '#2A7E4F',
+              amber: '#B87214'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+          letterSpacing: {
+            brand: '0.18em',
+          }
+        }
       }
-      if (e.key === 'Escape') {
-        closeCommandPalette();
-        closeNewTaskModal();
-        closeNewEmployeeModal();
-        closeNewLocationModal();
-        closeNewCoachingModal();
-        closeSettingsModal();
+    }
+  </script>
+
+  <style>
+    body { background-color: #F9F9F7; color: #121417; -webkit-font-smoothing: antialiased; }
+    .glass-nav { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 9999px; }
+  </style>
+
+  <!-- Firebase SDKs (Modular ES) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      onAuthStateChanged, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    // Your Registered Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDO7M9IKoCfAtZnOstkxBk531feNX91FKE",
+      authDomain: "cadence-app-fbf18.firebaseapp.com",
+      projectId: "cadence-app-fbf18",
+      storageBucket: "cadence-app-fbf18.firebasestorage.app",
+      messagingSenderId: "195971259427",
+      appId: "1:195971259427:web:e33be57697a69ae3992596",
+      measurementId: "G-RYNVMGSDEQ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // Default template state for brand new users
+    const defaultData = {
+      locations: [
+        { id: "loc-1", name: "Flagship Dealership", type: "OEM Dealership" },
+        { id: "loc-2", name: "Pre-Owned Showcase", type: "Used Car Dealership" },
+        { id: "loc-3", name: "Service & Care Facility", type: "Service Centre" }
+      ],
+      employees: [
+        { id: "emp-1", name: "Jordan Brooks", role: "Sales Specialist", locId: "loc-1", goal: "Master vehicle consultation cadence & transparency presentation." }
+      ],
+      visitPlans: {
+        "emp-1": [
+          { id: "vp-1", text: "Observe customer vehicle walkaround & discovery questions", done: false, type: "Observation Drill" }
+        ]
+      },
+      tasks: [
+        { id: "t-1", text: "Configure facility coaching standards & audit checklist", stage: "in-flight", tag: "Operations" },
+        { id: "t-2", text: "Plan monthly dealership team performance cadence", stage: "next", tag: "Strategy" }
+      ],
+      geminiApiKey: ""
+    };
+
+    let currentUser = null;
+    let unsubscribeFirestore = null;
+
+    window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
+
+    // Google Sign-In Action
+    window.loginWithGoogle = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        console.error("Auth Error:", err);
+        alert("Sign in failed: " + err.message);
+      }
+    };
+
+    // Sign-Out Action
+    window.logout = async () => {
+      if (unsubscribeFirestore) unsubscribeFirestore();
+      await signOut(auth);
+    };
+
+    // Save active state to Firestore
+    window.saveState = async () => {
+      if (!currentUser) return;
+      try {
+        const userDoc = doc(db, "users", currentUser.uid);
+        await setDoc(userDoc, {
+          locations: window.cadenceState.locations,
+          employees: window.cadenceState.employees,
+          visitPlans: window.cadenceState.visitPlans,
+          tasks: window.cadenceState.tasks,
+          geminiApiKey: window.cadenceState.geminiApiKey || ""
+        }, { merge: true });
+      } catch (err) {
+        console.error("Save error:", err);
+      }
+    };
+
+    // Realtime Auth State Listener
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      const authScreen = document.getElementById("auth-screen");
+      const appInterface = document.getElementById("app-interface");
+
+      if (user) {
+        authScreen.classList.add("hidden");
+        appInterface.classList.remove("hidden");
+
+        // Set User Profile in Nav
+        document.getElementById("user-name").textContent = user.displayName || user.email;
+        document.getElementById("user-avatar").src = user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
+
+        // Listen to User's Firestore Document
+        const userDocRef = doc(db, "users", user.uid);
+        unsubscribeFirestore = onSnapshot(userDocRef, (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            window.cadenceState = {
+              locations: data.locations || [],
+              employees: data.employees || [],
+              visitPlans: data.visitPlans || {},
+              tasks: data.tasks || [],
+              geminiApiKey: data.geminiApiKey || "",
+              selectedEmpId: window.cadenceState.selectedEmpId || data.employees?.[0]?.id || null
+            };
+          } else {
+            // First time login: seed default structure
+            setDoc(userDocRef, defaultData);
+            window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
+          }
+          window.renderAll();
+        });
+      } else {
+        authScreen.classList.remove("hidden");
+        appInterface.classList.add("hidden");
       }
     });
+  </script>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-cadence-sand selection:text-cadence-charcoal">
 
-    function showToast(msg) {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      toast.className = "mb-2 px-3.5 py-2 rounded-xl bg-charcoal-900 text-white text-xs font-medium shadow-floating flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-150";
-      toast.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>${msg}</span>`;
-      container.appendChild(toast);
+  <!-- ================= AUTHENTICATION MODAL (OFF-CANVAS BEFORE SIGN-IN) ================= -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 bg-cadence-canvas">
+    <div class="max-w-md w-full bg-white border border-cadence-border rounded-2xl p-8 shadow-sm text-center">
+      <div class="inline-flex items-center justify-center p-3 bg-cadence-sandLight rounded-2xl mb-6">
+        <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <h1 class="text-2xl font-bold tracking-brand text-cadence-charcoal uppercase">CADENCE</h1>
+      <p class="text-xs font-medium text-cadence-slate mt-2 tracking-wide uppercase">Leadership & Dealership Coaching Cockpit</p>
+      
+      <p class="text-xs text-cadence-slate mt-4 leading-relaxed">
+        Sign in with your Google account to access your personal pipeline, dealership facilities, coaching dossiers, and next-visit rhythm.
+      </p>
+
+      <div class="mt-8">
+        <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-cadence-charcoal text-white hover:bg-black px-5 py-3 rounded-xl text-xs font-semibold tracking-wide transition shadow-sm">
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"/>
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.9z"/>
+            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.2-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/>
+          </svg>
+          Continue with Google
+        </button>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-cadence-border text-[11px] text-cadence-slate flex items-center justify-center gap-1.5">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-cadence-green"></i>
+        <span>Isolated Cloud Firestore Persistence</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= AUTHENTICATED APP INTERFACE ================= -->
+  <div id="app-interface" class="hidden flex-1 flex flex-col">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass-nav border-b border-cadence-border px-6 py-3 transition-all">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div class="flex items-center gap-6">
+          <button onclick="switchView('overview')" class="flex items-center gap-3 group focus:outline-none text-left">
+            <svg class="w-8 h-8 transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-sm font-bold tracking-brand text-cadence-charcoal uppercase leading-none">CADENCE</span>
+              <span class="text-[10px] text-cadence-slate font-medium tracking-wider mt-0.5">EXECUTIVE COCKPIT</span>
+            </div>
+          </button>
+
+          <nav class="hidden md:flex items-center space-x-1 pl-4 border-l border-cadence-border">
+            <button id="nav-btn-overview" onclick="switchView('overview')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors">Overview</button>
+            <button id="nav-btn-pipeline" onclick="switchView('pipeline')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Pipeline</button>
+            <button id="nav-btn-coaching" onclick="switchView('coaching')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Coaching & Roster</button>
+            <button id="nav-btn-workspace" onclick="switchView('workspace')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Workspace Feed</button>
+          </nav>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="toggleCopilot()" class="flex items-center gap-2 bg-cadence-sandLight border border-cadence-border hover:bg-cadence-sand text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-2xs">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cadence-accent"></i>
+            <span class="hidden sm:inline">Ask Gemini</span>
+          </button>
+
+          <!-- User profile -->
+          <div class="flex items-center gap-2.5 pl-3 border-l border-cadence-border">
+            <img id="user-avatar" class="w-7 h-7 rounded-full border border-cadence-border object-cover" src="" alt="Avatar">
+            <span id="user-name" class="text-xs font-medium text-cadence-charcoal hidden sm:inline max-w-[120px] truncate">User</span>
+            <button onclick="logout()" title="Sign Out" class="p-1 hover:text-red-600 text-cadence-slate transition">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
+      
+      <!-- OVERVIEW VIEW -->
+      <div id="view-overview" class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Executive Summary</h1>
+            <p class="text-xs text-cadence-slate mt-1">Cross-dealership performance, coaching frequency, and live deliverables.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="switchView('pipeline')" class="px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">View Pipeline</button>
+            <button onclick="switchView('coaching')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Manage Locations & Visits</button>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Deliverables</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-charcoal" id="stat-active-tasks">0 In Flight</div>
+            <div class="text-xs text-cadence-slate mt-1">Priority manager action items</div>
+          </div>
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Coaching Cadence</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-green">94% Target</div>
+            <div class="text-xs text-cadence-slate mt-1">Bi-weekly cadence rhythm</div>
+          </div>
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Facilities</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-accent" id="stat-locations-count">0 Facilities</div>
+            <div class="text-xs text-cadence-slate mt-1">OEM, Used, & Service Facilities</div>
+          </div>
+        </div>
+
+        <!-- Facility Cards -->
+        <div class="bg-white border border-cadence-border rounded-xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Location Health & Assigned Staff</h2>
+            <button onclick="promptAddLocation()" class="text-xs text-cadence-accent font-semibold hover:underline">+ New Facility</button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="overview-stores-container">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE VIEW -->
+      <div id="view-pipeline" class="hidden space-y-6">
+        <div class="flex items-center justify-between pb-4 border-b border-cadence-border">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Personal Pipeline</h1>
+            <p class="text-xs text-cadence-slate mt-1">High-priority leadership items, reviews, and store deliverables.</p>
+          </div>
+          <button onclick="promptAddTask()" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ New Task</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="pipeline-board">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- COACHING & ROSTER VIEW -->
+      <div id="view-coaching" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Coaching & Team Roster</h1>
+            <p class="text-xs text-cadence-slate mt-1">Store rosters, individual growth dossiers, and visit drill tracking.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="promptAddLocation()" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">+ New Location</button>
+            <button onclick="promptAddMember()" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add Member</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 space-y-4" id="roster-list">
+            <!-- Dynamic staff grouping -->
+          </div>
+          <div class="lg:col-span-7" id="employee-dossier-card">
+            <!-- Active Dossier & Next Visit Plans -->
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE FEED VIEW -->
+      <div id="view-workspace" class="hidden space-y-6">
+        <div class="pb-4 border-b border-cadence-border">
+          <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Workspace Integration</h1>
+          <p class="text-xs text-cadence-slate mt-1">Direct Gmail action items and Google Calendar synchronization.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white border border-cadence-border rounded-xl p-5">
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cadence-charcoal mb-4">
+              <i data-lucide="mail" class="w-4 h-4 text-cadence-accent"></i>
+              <span>Actionable Email Threads</span>
+            </div>
+            <div class="space-y-3">
+              <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg">
+                <div class="text-xs font-bold text-cadence-charcoal">Training Matrix Review Request</div>
+                <div class="text-[11px] text-cadence-slate mt-1">"Can you review the observation criteria before tomorrow's visit?"</div>
+                <button onclick="addTask('Review observation criteria from email', 'Email Action')" class="mt-2 text-[10px] font-semibold px-2.5 py-1 bg-white border border-cadence-border rounded hover:bg-cadence-sand transition">+ Push to Pipeline</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-cadence-border rounded-xl p-5">
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cadence-charcoal mb-4">
+              <i data-lucide="calendar" class="w-4 h-4 text-cadence-accent"></i>
+              <span>Google Calendar Visits</span>
+            </div>
+            <div class="space-y-3">
+              <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-cadence-charcoal">Facility Walk & 1-on-1 Observation</div>
+                  <div class="text-[11px] text-cadence-slate mt-0.5">Thursday at 9:00 AM</div>
+                </div>
+                <span class="text-[10px] font-medium px-2 py-0.5 bg-cadence-sand rounded text-cadence-charcoal">Synced</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- GEMINI COPILOT DRAWER -->
+    <aside id="copilot-drawer" class="fixed inset-y-0 right-0 w-96 max-w-full bg-white border-l border-cadence-border shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+      <div class="p-4 border-b border-cadence-border flex items-center justify-between bg-cadence-canvas">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4 text-cadence-accent"></i>
+          <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Cadence Copilot</span>
+        </div>
+        <button onclick="toggleCopilot()" class="p-1 rounded hover:bg-cadence-sand transition">
+          <i data-lucide="x" class="w-4 h-4 text-cadence-slate"></i>
+        </button>
+      </div>
+      <div id="copilot-messages" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll text-xs">
+        <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal">
+          Hello! I can generate dealership observation drills, summarize coaching history, or organize your visit plans. What would you like to review?
+        </div>
+      </div>
+      <div class="p-3 border-t border-cadence-border flex gap-2">
+        <input id="copilot-input" type="text" placeholder="Ask Cadence Copilot..." class="flex-1 text-xs px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') sendCopilot()">
+        <button onclick="sendCopilot()" class="px-3 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Send</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- APPLICATION CONTROLLER SCRIPT -->
+  <script>
+    function renderAll() {
+      renderOverview();
+      renderPipeline();
+      renderRoster();
       lucide.createIcons();
-      setTimeout(() => toast.remove(), 3200);
+    }
+    window.renderAll = renderAll;
+
+    function switchView(viewName) {
+      ['overview', 'pipeline', 'coaching', 'workspace'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.add('hidden');
+        const btn = document.getElementById(`nav-btn-${v}`);
+        if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors';
+      });
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`nav-btn-${viewName}`);
+      if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors';
+      lucide.createIcons();
+    }
+    window.switchView = switchView;
+
+    function renderOverview() {
+      const container = document.getElementById('overview-stores-container');
+      const state = window.cadenceState;
+      if (!container) return;
+
+      container.innerHTML = state.locations.map(loc => {
+        const staff = state.employees.filter(e => e.locId === loc.id);
+        return `
+          <div class="p-4 bg-cadence-canvas border border-cadence-border rounded-lg hover:border-cadence-charcoal transition cursor-pointer" onclick="switchView('coaching'); selectEmployee('${staff[0]?.id || ''}')">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-cadence-charcoal">${loc.name}</span>
+              <span class="text-[10px] px-2 py-0.5 bg-cadence-sand rounded text-cadence-charcoal">${loc.type}</span>
+            </div>
+            <div class="text-[11px] text-cadence-slate mt-2">${staff.length} Team Members</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('stat-locations-count').textContent = `${state.locations.length} Facilities`;
+      const inFlightCount = state.tasks.filter(t => t.stage === 'in-flight').length;
+      document.getElementById('stat-active-tasks').textContent = `${inFlightCount} In Flight`;
     }
 
-    window.onload = function() {
-      initFirebase();
+    function renderPipeline() {
+      const board = document.getElementById('pipeline-board');
+      const state = window.cadenceState;
+      if (!board) return;
+
+      const cols = [
+        { id: 'next', label: 'Next Focus' },
+        { id: 'in-flight', label: 'In Flight' },
+        { id: 'done', label: 'Completed' }
+      ];
+
+      board.innerHTML = cols.map(col => {
+        const colTasks = state.tasks.filter(t => t.stage === col.id);
+        return `
+          <div class="bg-white border border-cadence-border rounded-xl p-4 flex flex-col min-h-[350px]">
+            <div class="flex items-center justify-between pb-3 border-b border-cadence-border mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">${col.label}</span>
+              <span class="text-xs text-cadence-slate">${colTasks.length}</span>
+            </div>
+            <div class="space-y-2 flex-1">
+              ${colTasks.map(t => `
+                <div class="p-3 bg-cadence-canvas border border-cadence-border rounded-lg text-xs shadow-2xs">
+                  <div class="font-medium text-cadence-charcoal">${t.text}</div>
+                  <div class="flex items-center justify-between mt-2 pt-2 border-t border-cadence-border/60">
+                    <span class="text-[10px] text-cadence-slate uppercase font-semibold">${t.tag}</span>
+                    <button onclick="advanceTask('${t.id}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Advance →</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function advanceTask(id) {
+      const t = window.cadenceState.tasks.find(x => x.id === id);
+      if (!t) return;
+      if (t.stage === 'next') t.stage = 'in-flight';
+      else if (t.stage === 'in-flight') t.stage = 'done';
+      else if (t.stage === 'done') t.stage = 'next';
+      window.saveState();
+      renderPipeline();
+    }
+    window.advanceTask = advanceTask;
+
+    function addTask(text, tag) {
+      window.cadenceState.tasks.push({ id: 't-' + Date.now(), text, stage: 'next', tag: tag || 'General' });
+      window.saveState();
+      renderPipeline();
+      switchView('pipeline');
+    }
+    window.addTask = addTask;
+
+    function promptAddTask() {
+      const text = prompt('Task or Deliverable Name:');
+      if (text) addTask(text, 'Manual');
+    }
+    window.promptAddTask = promptAddTask;
+
+    function renderRoster() {
+      const list = document.getElementById('roster-list');
+      const state = window.cadenceState;
+      if (!list) return;
+
+      list.innerHTML = state.locations.map(loc => {
+        const members = state.employees.filter(e => e.locId === loc.id);
+        return `
+          <div class="bg-white border border-cadence-border rounded-xl p-4">
+            <div class="flex items-center justify-between pb-2 border-b border-cadence-border mb-3">
+              <span class="text-xs font-bold text-cadence-charcoal">${loc.name}</span>
+              <span class="text-[10px] text-cadence-slate uppercase">${loc.type}</span>
+            </div>
+            <div class="space-y-1.5">
+              ${members.length > 0 ? members.map(m => `
+                <div onclick="selectEmployee('${m.id}')" class="p-2.5 rounded-lg cursor-pointer transition flex items-center justify-between ${state.selectedEmpId === m.id ? 'bg-cadence-sandLight border border-cadence-charcoal/20 font-semibold' : 'hover:bg-cadence-canvas text-cadence-slate'}">
+                  <span class="text-xs text-cadence-charcoal">${m.name}</span>
+                  <span class="text-[11px] text-cadence-slate">${m.role}</span>
+                </div>
+              `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No team members assigned</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      renderDossier();
+    }
+
+    function selectEmployee(id) {
+      window.cadenceState.selectedEmpId = id;
+      renderRoster();
+    }
+    window.selectEmployee = selectEmployee;
+
+    function renderDossier() {
+      const state = window.cadenceState;
+      const emp = state.employees.find(e => e.id === state.selectedEmpId);
+      const card = document.getElementById('employee-dossier-card');
+      if (!card) return;
+
+      if (!emp) {
+        card.innerHTML = `<div class="p-8 text-center text-xs text-cadence-slate bg-white border border-cadence-border rounded-xl">Select a team member to view their dossier.</div>`;
+        return;
+      }
+
+      const loc = state.locations.find(l => l.id === emp.locId);
+      const plans = state.visitPlans[emp.id] || [];
+
+      card.innerHTML = `
+        <div class="bg-white border border-cadence-border rounded-xl p-6 space-y-6">
+          <div class="flex items-start justify-between pb-4 border-b border-cadence-border">
+            <div>
+              <h2 class="text-xl font-bold text-cadence-charcoal">${emp.name}</h2>
+              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name} (${loc?.type})</p>
+            </div>
+            <span class="text-[10px] font-semibold px-2.5 py-1 bg-cadence-sand rounded text-cadence-charcoal">Drive Dossier</span>
+          </div>
+
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-cadence-slate mb-1">Developmental Focus</div>
+            <div class="p-3 bg-cadence-canvas border border-cadence-border rounded-lg text-xs text-cadence-charcoal">${emp.goal}</div>
+          </div>
+
+          <div class="border border-cadence-border rounded-xl p-4 bg-cadence-sandLight/50">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Next Visit Coaching Plan</span>
+                <p class="text-[11px] text-cadence-slate">Observation drills & targets for next facility walk.</p>
+              </div>
+              <button onclick="suggestVisitDrills('${emp.name}', '${emp.goal}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3 h-3"></i> Gemini Suggest
+              </button>
+            </div>
+
+            <div class="space-y-2 mb-3">
+              ${plans.length > 0 ? plans.map(p => `
+                <div class="flex items-center justify-between p-2.5 bg-white border border-cadence-border rounded-lg text-xs">
+                  <div class="flex items-center gap-2.5">
+                    <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlan('${emp.id}', '${p.id}')" class="rounded border-cadence-border text-cadence-charcoal focus:ring-0">
+                    <span class="${p.done ? 'line-through text-cadence-slate' : 'text-cadence-charcoal font-medium'}">${p.text}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-cadence-slate bg-cadence-canvas px-2 py-0.5 rounded border border-cadence-border">${p.type}</span>
+                    <button onclick="addTask('Follow up with ${emp.name}: ${p.text}', '${loc?.name}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Sync</button>
+                  </div>
+                </div>
+              `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No drills scheduled yet.</div>'}
+            </div>
+
+            <div class="flex gap-2">
+              <input id="input-new-visit-task" type="text" placeholder="Add observation drill..." class="flex-1 text-xs px-3 py-2 bg-white border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') addVisitTask('${emp.id}')">
+              <button onclick="addVisitTask('${emp.id}')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add</button>
+            </div>
+          </div>
+        </div>
+      `;
       lucide.createIcons();
-    };
+    }
+
+    function togglePlan(empId, planId) {
+      const p = (window.cadenceState.visitPlans[empId] || []).find(x => x.id === planId);
+      if (p) p.done = !p.done;
+      window.saveState();
+      renderDossier();
+    }
+    window.togglePlan = togglePlan;
+
+    function addVisitTask(empId) {
+      const input = document.getElementById('input-new-visit-task');
+      if (!input || !input.value.trim()) return;
+      if (!window.cadenceState.visitPlans[empId]) window.cadenceState.visitPlans[empId] = [];
+      window.cadenceState.visitPlans[empId].push({
+        id: 'vp-' + Date.now(),
+        text: input.value.trim(),
+        done: false,
+        type: 'Skill Practice'
+      });
+      input.value = '';
+      window.saveState();
+      renderDossier();
+    }
+    window.addVisitTask = addVisitTask;
+
+    function promptAddLocation() {
+      const name = prompt('Dealership or Facility Name:');
+      if (!name) return;
+      const type = prompt('Facility Type (OEM Dealership, Used Car Dealership, or Service Centre):') || 'OEM Dealership';
+      window.cadenceState.locations.push({ id: 'loc-' + Date.now(), name, type });
+      window.saveState();
+      renderOverview();
+      renderRoster();
+    }
+    window.promptAddLocation = promptAddLocation;
+
+    function promptAddMember() {
+      const name = prompt('Team Member Name:');
+      if (!name) return;
+      const role = prompt('Role/Title:') || 'Sales Consultant';
+      const locId = window.cadenceState.locations[0]?.id || 'loc-1';
+      const empId = 'emp-' + Date.now();
+      window.cadenceState.employees.push({ id: empId, name, role, locId, goal: 'Master customer experience & dealership sales process.' });
+      window.cadenceState.visitPlans[empId] = [];
+      window.saveState();
+      selectEmployee(empId);
+      renderOverview();
+    }
+    window.promptAddMember = promptAddMember;
+
+    function toggleCopilot() {
+      const drawer = document.getElementById('copilot-drawer');
+      drawer.classList.toggle('translate-x-full');
+    }
+    window.toggleCopilot = toggleCopilot;
+
+    function sendCopilot() {
+      const input = document.getElementById('copilot-input');
+      const text = input.value.trim();
+      if (!text) return;
+      const container = document.getElementById('copilot-messages');
+      container.innerHTML += `<div class="p-2.5 bg-cadence-canvas border border-cadence-border rounded-lg text-cadence-charcoal self-end text-right font-medium">${text}</div>`;
+      input.value = '';
+
+      setTimeout(() => {
+        container.innerHTML += `<div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal">Understood. I will help track and align these objectives with your coaching cadence.</div>`;
+        container.scrollTop = container.scrollHeight;
+      }, 500);
+    }
+    window.sendCopilot = sendCopilot;
+
+    function suggestVisitDrills(empName, goal) {
+      toggleCopilot();
+      const container = document.getElementById('copilot-messages');
+      container.innerHTML += `
+        <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal space-y-2">
+          <div class="font-bold">Suggested Drills for ${empName}:</div>
+          <div>Focus area: "<em>${goal}</em>"</div>
+          <ul class="list-disc pl-4 space-y-1">
+            <li><strong>Customer Discovery Drill:</strong> Observe qualification questions on walk-in consultations.</li>
+            <li><strong>Objection Turnaround:</strong> Shadow trade-in appraisal consultation review.</li>
+          </ul>
+          <button onclick="addTask('Conduct discovery drills with ${empName}', 'Coaching')" class="mt-2 text-[10px] font-semibold px-2 py-1 bg-cadence-charcoal text-white rounded">+ Add to Pipeline</button>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+    }
+    window.suggestVisitDrills = suggestVisitDrills;
   </script>
 </body>
 </html>
