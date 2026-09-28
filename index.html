@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadence — Executive & Dealership Cockpit</title>
+  <meta name="description" content="Executive & Dealership Cockpit for personal management, coaching dossiers, and dealership training project tracking.">
+  <meta property="og:title" content="Cadence — Executive & Dealership Cockpit">
+  <meta property="og:description" content="Executive & Dealership Cockpit for personal management, coaching dossiers, and dealership training project tracking.">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -71,7 +74,7 @@
       onSnapshot 
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    // Your Registered Firebase Config
+    // Registered Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDO7M9IKoCfAtZnOstkxBk531feNX91FKE",
       authDomain: "cadence-app-fbf18.firebaseapp.com",
@@ -114,736 +117,74 @@
 
     window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
 
+    // Display inline auth error (avoids window.alert in iframe)
+    function showAuthError(msg) {
+      const el = document.getElementById("auth-error-msg");
+      if (el) {
+        el.textContent = msg;
+        el.classList.remove("hidden");
+      }
+    }
+
     // Google Sign-In Action
     window.loginWithGoogle = async () => {
       try {
+        const el = document.getElementById("auth-error-msg");
+        if (el) el.classList.add("hidden");
         await signInWithPopup(auth, provider);
       } catch (err) {
         console.error("Auth Error:", err);
-        alert("Sign in failed: " + err.message);
+        showAuthError("Google Sign-In note: " + (err.message || "Failed to sign in. You can also explore using Demo Mode below."));
       }
     };
 
-    // Sign-Out Action
-    window.logout = async () => {
-      if (unsubscribeFirestore) unsubscribeFirestore();
-      await signOut(auth);
-    };
-
-    // Save active state to Firestore
-    window.saveState = async () => {
-      if (!currentUser) return;
-      try {
-        const userDoc = doc(db, "users", currentUser.uid);
-        await setDoc(userDoc, {
-          locations: window.cadenceState.locations,
-          employees: window.cadenceState.employees,
-          visitPlans: window.cadenceState.visitPlans,
-          tasks: window.cadenceState.tasks,
-          geminiApiKey: window.cadenceState.geminiApiKey || ""
-        }, { merge: true });
-      } catch (err) {
-        console.error("Save error:", err);
-      }
-    };
-
-    // Realtime Auth State Listener
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      const authScreen = document.getElementById("auth-screen");
-      const appInterface = document.getElementById("app-interface");
-
-      if (user) {
-        authScreen.classList.add("hidden");
-        appInterface.classList.remove("hidden");
-
-        // Set User Profile in Nav
-        document.getElementById("user-name").textContent = user.displayName || user.email;
-        document.getElementById("user-avatar").src = user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
-
-        // Listen to User's Firestore Document
-        const userDocRef = doc(db, "users", user.uid);
-        unsubscribeFirestore = onSnapshot(userDocRef, (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            window.cadenceState = {
-              locations: data.locations || [],
-              employees: data.employees || [],
-              visitPlans: data.visitPlans || {},
-              tasks: data.tasks || [],
-              geminiApiKey: data.geminiApiKey || "",
-              selectedEmpId: window.cadenceState.selectedEmpId || data.employees?.[0]?.id || null
-            };
-          } else {
-            // First time login: seed default structure
-            setDoc(userDocRef, defaultData);
-            window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
-          }
-          window.renderAll();
-        });
-      } else {
-        authScreen.classList.remove("hidden");
-        appInterface.classList.add("hidden");
-      }
-    });
-  </script>
-</head>
-<body class="min-h-screen flex flex-col font-sans selection:bg-cadence-sand selection:text-cadence-charcoal">
-
-  <!-- ================= AUTHENTICATION MODAL (OFF-CANVAS BEFORE SIGN-IN) ================= -->
-  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 bg-cadence-canvas">
-    <div class="max-w-md w-full bg-white border border-cadence-border rounded-2xl p-8 shadow-sm text-center">
-      <div class="inline-flex items-center justify-center p-3 bg-cadence-sandLight rounded-2xl mb-6">
-        <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-
-      <h1 class="text-2xl font-bold tracking-brand text-cadence-charcoal uppercase">CADENCE</h1>
-      <p class="text-xs font-medium text-cadence-slate mt-2 tracking-wide uppercase">Leadership & Dealership Coaching Cockpit</p>
-      
-      <p class="text-xs text-cadence-slate mt-4 leading-relaxed">
-        Sign in with your Google account to access your personal pipeline, dealership facilities, coaching dossiers, and next-visit rhythm.
-      </p>
-
-      <div class="mt-8">
-        <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-cadence-charcoal text-white hover:bg-black px-5 py-3 rounded-xl text-xs font-semibold tracking-wide transition shadow-sm">
-          <svg class="w-4 h-4" viewBox="0 0 24 24">
-            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"/>
-            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.9z"/>
-            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
-            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.2-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/>
-          </svg>
-          Continue with Google
-        </button>
-      </div>
-
-      <div class="mt-6 pt-6 border-t border-cadence-border text-[11px] text-cadence-slate flex items-center justify-center gap-1.5">
-        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-cadence-green"></i>
-        <span>Isolated Cloud Firestore Persistence</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= AUTHENTICATED APP INTERFACE ================= -->
-  <div id="app-interface" class="hidden flex-1 flex flex-col">
-    <!-- Header -->
-    <header class="sticky top-0 z-40 glass-nav border-b border-cadence-border px-6 py-3 transition-all">
-      <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        <div class="flex items-center gap-6">
-          <button onclick="switchView('overview')" class="flex items-center gap-3 group focus:outline-none text-left">
-            <svg class="w-8 h-8 transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <div class="flex flex-col">
-              <span class="text-sm font-bold tracking-brand text-cadence-charcoal uppercase leading-none">CADENCE</span>
-              <span class="text-[10px] text-cadence-slate font-medium tracking-wider mt-0.5">EXECUTIVE COCKPIT</span>
-            </div>
-          </button>
-
-          <nav class="hidden md:flex items-center space-x-1 pl-4 border-l border-cadence-border">
-            <button id="nav-btn-overview" onclick="switchView('overview')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors">Overview</button>
-            <button id="nav-btn-pipeline" onclick="switchView('pipeline')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Pipeline</button>
-            <button id="nav-btn-coaching" onclick="switchView('coaching')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Coaching & Roster</button>
-            <button id="nav-btn-workspace" onclick="switchView('workspace')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Workspace Feed</button>
-          </nav>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <button onclick="toggleCopilot()" class="flex items-center gap-2 bg-cadence-sandLight border border-cadence-border hover:bg-cadence-sand text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-2xs">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cadence-accent"></i>
-            <span class="hidden sm:inline">Ask Gemini</span>
-          </button>
-
-          <!-- User profile -->
-          <div class="flex items-center gap-2.5 pl-3 border-l border-cadence-border">
-            <img id="user-avatar" class="w-7 h-7 rounded-full border border-cadence-border object-cover" src="" alt="Avatar">
-            <span id="user-name" class="text-xs font-medium text-cadence-charcoal hidden sm:inline max-w-[120px] truncate">User</span>
-            <button onclick="logout()" title="Sign Out" class="p-1 hover:text-red-600 text-cadence-slate transition">
-              <i data-lucide="log-out" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
-      
-      <!-- OVERVIEW VIEW -->
-      <div id="view-overview" class="space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
-          <div>
-            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Executive Summary</h1>
-            <p class="text-xs text-cadence-slate mt-1">Cross-dealership performance, coaching frequency, and live deliverables.</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="switchView('pipeline')" class="px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">View Pipeline</button>
-            <button onclick="switchView('coaching')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Manage Locations & Visits</button>
-          </div>
-        </div>
-
-        <!-- Metrics -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Deliverables</div>
-            <div class="text-2xl font-bold mt-2 text-cadence-charcoal" id="stat-active-tasks">0 In Flight</div>
-            <div class="text-xs text-cadence-slate mt-1">Priority manager action items</div>
-          </div>
-          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Coaching Cadence</div>
-            <div class="text-2xl font-bold mt-2 text-cadence-green">94% Target</div>
-            <div class="text-xs text-cadence-slate mt-1">Bi-weekly cadence rhythm</div>
-          </div>
-          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Facilities</div>
-            <div class="text-2xl font-bold mt-2 text-cadence-accent" id="stat-locations-count">0 Facilities</div>
-            <div class="text-xs text-cadence-slate mt-1">OEM, Used, & Service Facilities</div>
-          </div>
-        </div>
-
-        <!-- Facility Cards -->
-        <div class="bg-white border border-cadence-border rounded-xl p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Location Health & Assigned Staff</h2>
-            <button onclick="promptAddLocation()" class="text-xs text-cadence-accent font-semibold hover:underline">+ New Facility</button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="overview-stores-container">
-            <!-- Rendered dynamically -->
-          </div>
-        </div>
-      </div>
-
-      <!-- PIPELINE VIEW -->
-      <div id="view-pipeline" class="hidden space-y-6">
-        <div class="flex items-center justify-between pb-4 border-b border-cadence-border">
-          <div>
-            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Personal Pipeline</h1>
-            <p class="text-xs text-cadence-slate mt-1">High-priority leadership items, reviews, and store deliverables.</p>
-          </div>
-          <button onclick="promptAddTask()" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ New Task</button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="pipeline-board">
-          <!-- Rendered dynamically -->
-        </div>
-      </div>
-
-      <!-- COACHING & ROSTER VIEW -->
-      <div id="view-coaching" class="hidden space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
-          <div>
-            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Coaching & Team Roster</h1>
-            <p class="text-xs text-cadence-slate mt-1">Store rosters, individual growth dossiers, and visit drill tracking.</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="promptAddLocation()" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">+ New Location</button>
-            <button onclick="promptAddMember()" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add Member</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div class="lg:col-span-5 space-y-4" id="roster-list">
-            <!-- Dynamic staff grouping -->
-          </div>
-          <div class="lg:col-span-7" id="employee-dossier-card">
-            <!-- Active Dossier & Next Visit Plans -->
-          </div>
-        </div>
-      </div>
-
-      <!-- WORKSPACE FEED VIEW -->
-      <div id="view-workspace" class="hidden space-y-6">
-        <div class="pb-4 border-b border-cadence-border">
-          <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Workspace Integration</h1>
-          <p class="text-xs text-cadence-slate mt-1">Direct Gmail action items and Google Calendar synchronization.</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-white border border-cadence-border rounded-xl p-5">
-            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cadence-charcoal mb-4">
-              <i data-lucide="mail" class="w-4 h-4 text-cadence-accent"></i>
-              <span>Actionable Email Threads</span>
-            </div>
-            <div class="space-y-3">
-              <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg">
-                <div class="text-xs font-bold text-cadence-charcoal">Training Matrix Review Request</div>
-                <div class="text-[11px] text-cadence-slate mt-1">"Can you review the observation criteria before tomorrow's visit?"</div>
-                <button onclick="addTask('Review observation criteria from email', 'Email Action')" class="mt-2 text-[10px] font-semibold px-2.5 py-1 bg-white border border-cadence-border rounded hover:bg-cadence-sand transition">+ Push to Pipeline</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white border border-cadence-border rounded-xl p-5">
-            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cadence-charcoal mb-4">
-              <i data-lucide="calendar" class="w-4 h-4 text-cadence-accent"></i>
-              <span>Google Calendar Visits</span>
-            </div>
-            <div class="space-y-3">
-              <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg flex items-center justify-between">
-                <div>
-                  <div class="text-xs font-bold text-cadence-charcoal">Facility Walk & 1-on-1 Observation</div>
-                  <div class="text-[11px] text-cadence-slate mt-0.5">Thursday at 9:00 AM</div>
-                </div>
-                <span class="text-[10px] font-medium px-2 py-0.5 bg-cadence-sand rounded text-cadence-charcoal">Synced</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- GEMINI COPILOT DRAWER -->
-    <aside id="copilot-drawer" class="fixed inset-y-0 right-0 w-96 max-w-full bg-white border-l border-cadence-border shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
-      <div class="p-4 border-b border-cadence-border flex items-center justify-between bg-cadence-canvas">
-        <div class="flex items-center gap-2">
-          <i data-lucide="sparkles" class="w-4 h-4 text-cadence-accent"></i>
-          <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Cadence Copilot</span>
-        </div>
-        <button onclick="toggleCopilot()" class="p-1 rounded hover:bg-cadence-sand transition">
-          <i data-lucide="x" class="w-4 h-4 text-cadence-slate"></i>
-        </button>
-      </div>
-      <div id="copilot-messages" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll text-xs">
-        <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal">
-          Hello! I can generate dealership observation drills, summarize coaching history, or organize your visit plans. What would you like to review?
-        </div>
-      </div>
-      <div class="p-3 border-t border-cadence-border flex gap-2">
-        <input id="copilot-input" type="text" placeholder="Ask Cadence Copilot..." class="flex-1 text-xs px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') sendCopilot()">
-        <button onclick="sendCopilot()" class="px-3 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Send</button>
-      </div>
-    </aside>
-  </div>
-
-  <!-- APPLICATION CONTROLLER SCRIPT -->
-  <script>
-    function renderAll() {
-      renderOverview();
-      renderPipeline();
-      renderRoster();
-      lucide.createIcons();
-    }
-    window.renderAll = renderAll;
-
-    function switchView(viewName) {
-      ['overview', 'pipeline', 'coaching', 'workspace'].forEach(v => {
-        document.getElementById(`view-${v}`).classList.add('hidden');
-        const btn = document.getElementById(`nav-btn-${v}`);
-        if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors';
-      });
-      document.getElementById(`view-${viewName}`).classList.remove('hidden');
-      const activeBtn = document.getElementById(`nav-btn-${viewName}`);
-      if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors';
-      lucide.createIcons();
-    }
-    window.switchView = switchView;
-
-    function renderOverview() {
-      const container = document.getElementById('overview-stores-container');
-      const state = window.cadenceState;
-      if (!container) return;
-
-      container.innerHTML = state.locations.map(loc => {
-        const staff = state.employees.filter(e => e.locId === loc.id);
-        return `
-          <div class="p-4 bg-cadence-canvas border border-cadence-border rounded-lg hover:border-cadence-charcoal transition cursor-pointer" onclick="switchView('coaching'); selectEmployee('${staff[0]?.id || ''}')">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-cadence-charcoal">${loc.name}</span>
-              <span class="text-[10px] px-2 py-0.5 bg-cadence-sand rounded text-cadence-charcoal">${loc.type}</span>
-            </div>
-            <div class="text-[11px] text-cadence-slate mt-2">${staff.length} Team Members</div>
-          </div>
-        `;
-      }).join('');
-
-      document.getElementById('stat-locations-count').textContent = `${state.locations.length} Facilities`;
-      const inFlightCount = state.tasks.filter(t => t.stage === 'in-flight').length;
-      document.getElementById('stat-active-tasks').textContent = `${inFlightCount} In Flight`;
-    }
-
-    function renderPipeline() {
-      const board = document.getElementById('pipeline-board');
-      const state = window.cadenceState;
-      if (!board) return;
-
-      const cols = [
-        { id: 'next', label: 'Next Focus' },
-        { id: 'in-flight', label: 'In Flight' },
-        { id: 'done', label: 'Completed' }
-      ];
-
-      board.innerHTML = cols.map(col => {
-        const colTasks = state.tasks.filter(t => t.stage === col.id);
-        return `
-          <div class="bg-white border border-cadence-border rounded-xl p-4 flex flex-col min-h-[350px]">
-            <div class="flex items-center justify-between pb-3 border-b border-cadence-border mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">${col.label}</span>
-              <span class="text-xs text-cadence-slate">${colTasks.length}</span>
-            </div>
-            <div class="space-y-2 flex-1">
-              ${colTasks.map(t => `
-                <div class="p-3 bg-cadence-canvas border border-cadence-border rounded-lg text-xs shadow-2xs">
-                  <div class="font-medium text-cadence-charcoal">${t.text}</div>
-                  <div class="flex items-center justify-between mt-2 pt-2 border-t border-cadence-border/60">
-                    <span class="text-[10px] text-cadence-slate uppercase font-semibold">${t.tag}</span>
-                    <button onclick="advanceTask('${t.id}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Advance →</button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function advanceTask(id) {
-      const t = window.cadenceState.tasks.find(x => x.id === id);
-      if (!t) return;
-      if (t.stage === 'next') t.stage = 'in-flight';
-      else if (t.stage === 'in-flight') t.stage = 'done';
-      else if (t.stage === 'done') t.stage = 'next';
-      window.saveState();
-      renderPipeline();
-    }
-    window.advanceTask = advanceTask;
-
-    function addTask(text, tag) {
-      window.cadenceState.tasks.push({ id: 't-' + Date.now(), text, stage: 'next', tag: tag || 'General' });
-      window.saveState();
-      renderPipeline();
-      switchView('pipeline');
-    }
-    window.addTask = addTask;
-
-    function promptAddTask() {
-      const text = prompt('Task or Deliverable Name:');
-      if (text) addTask(text, 'Manual');
-    }
-    window.promptAddTask = promptAddTask;
-
-    function renderRoster() {
-      const list = document.getElementById('roster-list');
-      const state = window.cadenceState;
-      if (!list) return;
-
-      list.innerHTML = state.locations.map(loc => {
-        const members = state.employees.filter(e => e.locId === loc.id);
-        return `
-          <div class="bg-white border border-cadence-border rounded-xl p-4">
-            <div class="flex items-center justify-between pb-2 border-b border-cadence-border mb-3">
-              <span class="text-xs font-bold text-cadence-charcoal">${loc.name}</span>
-              <span class="text-[10px] text-cadence-slate uppercase">${loc.type}</span>
-            </div>
-            <div class="space-y-1.5">
-              ${members.length > 0 ? members.map(m => `
-                <div onclick="selectEmployee('${m.id}')" class="p-2.5 rounded-lg cursor-pointer transition flex items-center justify-between ${state.selectedEmpId === m.id ? 'bg-cadence-sandLight border border-cadence-charcoal/20 font-semibold' : 'hover:bg-cadence-canvas text-cadence-slate'}">
-                  <span class="text-xs text-cadence-charcoal">${m.name}</span>
-                  <span class="text-[11px] text-cadence-slate">${m.role}</span>
-                </div>
-              `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No team members assigned</div>'}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      renderDossier();
-    }
-
-    function selectEmployee(id) {
-      window.cadenceState.selectedEmpId = id;
-      renderRoster();
-    }
-    window.selectEmployee = selectEmployee;
-
-    function renderDossier() {
-      const state = window.cadenceState;
-      const emp = state.employees.find(e => e.id === state.selectedEmpId);
-      const card = document.getElementById('employee-dossier-card');
-      if (!card) return;
-
-      if (!emp) {
-        card.innerHTML = `<div class="p-8 text-center text-xs text-cadence-slate bg-white border border-cadence-border rounded-xl">Select a team member to view their dossier.</div>`;
-        return;
-      }
-
-      const loc = state.locations.find(l => l.id === emp.locId);
-      const plans = state.visitPlans[emp.id] || [];
-
-      card.innerHTML = `
-        <div class="bg-white border border-cadence-border rounded-xl p-6 space-y-6">
-          <div class="flex items-start justify-between pb-4 border-b border-cadence-border">
-            <div>
-              <h2 class="text-xl font-bold text-cadence-charcoal">${emp.name}</h2>
-              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name} (${loc?.type})</p>
-            </div>
-            <span class="text-[10px] font-semibold px-2.5 py-1 bg-cadence-sand rounded text-cadence-charcoal">Drive Dossier</span>
-          </div>
-
-          <div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-cadence-slate mb-1">Developmental Focus</div>
-            <div class="p-3 bg-cadence-canvas border border-cadence-border rounded-lg text-xs text-cadence-charcoal">${emp.goal}</div>
-          </div>
-
-          <div class="border border-cadence-border rounded-xl p-4 bg-cadence-sandLight/50">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Next Visit Coaching Plan</span>
-                <p class="text-[11px] text-cadence-slate">Observation drills & targets for next facility walk.</p>
-              </div>
-              <button onclick="suggestVisitDrills('${emp.name}', '${emp.goal}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1">
-                <i data-lucide="sparkles" class="w-3 h-3"></i> Gemini Suggest
-              </button>
-            </div>
-
-            <div class="space-y-2 mb-3">
-              ${plans.length > 0 ? plans.map(p => `
-                <div class="flex items-center justify-between p-2.5 bg-white border border-cadence-border rounded-lg text-xs">
-                  <div class="flex items-center gap-2.5">
-                    <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlan('${emp.id}', '${p.id}')" class="rounded border-cadence-border text-cadence-charcoal focus:ring-0">
-                    <span class="${p.done ? 'line-through text-cadence-slate' : 'text-cadence-charcoal font-medium'}">${p.text}</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-[10px] text-cadence-slate bg-cadence-canvas px-2 py-0.5 rounded border border-cadence-border">${p.type}</span>
-                    <button onclick="addTask('Follow up with ${emp.name}: ${p.text}', '${loc?.name}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Sync</button>
-                  </div>
-                </div>
-              `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No drills scheduled yet.</div>'}
-            </div>
-
-            <div class="flex gap-2">
-              <input id="input-new-visit-task" type="text" placeholder="Add observation drill..." class="flex-1 text-xs px-3 py-2 bg-white border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') addVisitTask('${emp.id}')">
-              <button onclick="addVisitTask('${emp.id}')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add</button>
-            </div>
-          </div>
-        </div>
-      `;
-      lucide.createIcons();
-    }
-
-    function togglePlan(empId, planId) {
-      const p = (window.cadenceState.visitPlans[empId] || []).find(x => x.id === planId);
-      if (p) p.done = !p.done;
-      window.saveState();
-      renderDossier();
-    }
-    window.togglePlan = togglePlan;
-
-    function addVisitTask(empId) {
-      const input = document.getElementById('input-new-visit-task');
-      if (!input || !input.value.trim()) return;
-      if (!window.cadenceState.visitPlans[empId]) window.cadenceState.visitPlans[empId] = [];
-      window.cadenceState.visitPlans[empId].push({
-        id: 'vp-' + Date.now(),
-        text: input.value.trim(),
-        done: false,
-        type: 'Skill Practice'
-      });
-      input.value = '';
-      window.saveState();
-      renderDossier();
-    }
-    window.addVisitTask = addVisitTask;
-
-    function promptAddLocation() {
-      const name = prompt('Dealership or Facility Name:');
-      if (!name) return;
-      const type = prompt('Facility Type (OEM Dealership, Used Car Dealership, or Service Centre):') || 'OEM Dealership';
-      window.cadenceState.locations.push({ id: 'loc-' + Date.now(), name, type });
-      window.saveState();
-      renderOverview();
-      renderRoster();
-    }
-    window.promptAddLocation = promptAddLocation;
-
-    function promptAddMember() {
-      const name = prompt('Team Member Name:');
-      if (!name) return;
-      const role = prompt('Role/Title:') || 'Sales Consultant';
-      const locId = window.cadenceState.locations[0]?.id || 'loc-1';
-      const empId = 'emp-' + Date.now();
-      window.cadenceState.employees.push({ id: empId, name, role, locId, goal: 'Master customer experience & dealership sales process.' });
-      window.cadenceState.visitPlans[empId] = [];
-      window.saveState();
-      selectEmployee(empId);
-      renderOverview();
-    }
-    window.promptAddMember = promptAddMember;
-
-    function toggleCopilot() {
-      const drawer = document.getElementById('copilot-drawer');
-      drawer.classList.toggle('translate-x-full');
-    }
-    window.toggleCopilot = toggleCopilot;
-
-    function sendCopilot() {
-      const input = document.getElementById('copilot-input');
-      const text = input.value.trim();
-      if (!text) return;
-      const container = document.getElementById('copilot-messages');
-      container.innerHTML += `<div class="p-2.5 bg-cadence-canvas border border-cadence-border rounded-lg text-cadence-charcoal self-end text-right font-medium">${text}</div>`;
-      input.value = '';
-
-      setTimeout(() => {
-        container.innerHTML += `<div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal">Understood. I will help track and align these objectives with your coaching cadence.</div>`;
-        container.scrollTop = container.scrollHeight;
-      }, 500);
-    }
-    window.sendCopilot = sendCopilot;
-
-    function suggestVisitDrills(empName, goal) {
-      toggleCopilot();
-      const container = document.getElementById('copilot-messages');
-      container.innerHTML += `
-        <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal space-y-2">
-          <div class="font-bold">Suggested Drills for ${empName}:</div>
-          <div>Focus area: "<em>${goal}</em>"</div>
-          <ul class="list-disc pl-4 space-y-1">
-            <li><strong>Customer Discovery Drill:</strong> Observe qualification questions on walk-in consultations.</li>
-            <li><strong>Objection Turnaround:</strong> Shadow trade-in appraisal consultation review.</li>
-          </ul>
-          <button onclick="addTask('Conduct discovery drills with ${empName}', 'Coaching')" class="mt-2 text-[10px] font-semibold px-2 py-1 bg-cadence-charcoal text-white rounded">+ Add to Pipeline</button>
-        </div>
-      `;
-      container.scrollTop = container.scrollHeight;
-    }
-    window.suggestVisitDrills = suggestVisitDrills;
-  </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadence — Executive & Dealership Cockpit</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Fonts & Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Tailwind Configuration matching Scandinavian / Apple Aesthetic -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            cadence: {
-              canvas: '#F9F9F7',
-              surface: '#FFFFFF',
-              charcoal: '#121417',
-              slate: '#5A6068',
-              border: 'rgba(28, 32, 40, 0.08)',
-              sand: '#EFECE6',
-              sandLight: '#F5F3EF',
-              accent: '#183884',
-              accentHover: '#132C69',
-              green: '#2A7E4F',
-              amber: '#B87214'
-            }
-          },
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-          },
-          letterSpacing: {
-            brand: '0.18em',
-          }
+    // Demo Mode Sign-In Action (ensures instant availability in restricted iframes)
+    window.loginAsDemo = () => {
+      const saved = localStorage.getItem("cadence_demo_state");
+      if (saved) {
+        try {
+          window.cadenceState = JSON.parse(saved);
+        } catch (e) {
+          window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
         }
+      } else {
+        window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
       }
-    }
-  </script>
+      currentUser = {
+        uid: "demo-user",
+        displayName: "Jordan Brooks (Executive)",
+        email: "jordan.brooks@cadence.app",
+        photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"
+      };
 
-  <style>
-    body { background-color: #F9F9F7; color: #121417; -webkit-font-smoothing: antialiased; }
-    .glass-nav { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 9999px; }
-  </style>
-
-  <!-- Firebase SDKs (Modular ES) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-    import { 
-      getAuth, 
-      signInWithPopup, 
-      GoogleAuthProvider, 
-      onAuthStateChanged, 
-      signOut 
-    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-    import { 
-      getFirestore, 
-      doc, 
-      setDoc, 
-      getDoc, 
-      onSnapshot 
-    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
-
-    // Your Registered Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDO7M9IKoCfAtZnOstkxBk531feNX91FKE",
-      authDomain: "cadence-app-fbf18.firebaseapp.com",
-      projectId: "cadence-app-fbf18",
-      storageBucket: "cadence-app-fbf18.firebasestorage.app",
-      messagingSenderId: "195971259427",
-      appId: "1:195971259427:web:e33be57697a69ae3992596",
-      measurementId: "G-RYNVMGSDEQ"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
-
-    // Default template state for brand new users
-    const defaultData = {
-      locations: [
-        { id: "loc-1", name: "Flagship Dealership", type: "OEM Dealership" },
-        { id: "loc-2", name: "Pre-Owned Showcase", type: "Used Car Dealership" },
-        { id: "loc-3", name: "Service & Care Facility", type: "Service Centre" }
-      ],
-      employees: [
-        { id: "emp-1", name: "Jordan Brooks", role: "Sales Specialist", locId: "loc-1", goal: "Master vehicle consultation cadence & transparency presentation." }
-      ],
-      visitPlans: {
-        "emp-1": [
-          { id: "vp-1", text: "Observe customer vehicle walkaround & discovery questions", done: false, type: "Observation Drill" }
-        ]
-      },
-      tasks: [
-        { id: "t-1", text: "Configure facility coaching standards & audit checklist", stage: "in-flight", tag: "Operations" },
-        { id: "t-2", text: "Plan monthly dealership team performance cadence", stage: "next", tag: "Strategy" }
-      ],
-      geminiApiKey: ""
-    };
-
-    let currentUser = null;
-    let unsubscribeFirestore = null;
-
-    window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
-
-    // Google Sign-In Action
-    window.loginWithGoogle = async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (err) {
-        console.error("Auth Error:", err);
-        alert("Sign in failed: " + err.message);
-      }
+      document.getElementById("auth-screen").classList.add("hidden");
+      document.getElementById("app-interface").classList.remove("hidden");
+      document.getElementById("user-name").textContent = currentUser.displayName;
+      document.getElementById("user-avatar").src = currentUser.photoURL;
+      window.renderAll();
     };
 
     // Sign-Out Action
     window.logout = async () => {
       if (unsubscribeFirestore) unsubscribeFirestore();
+      if (currentUser?.uid === "demo-user") {
+        currentUser = null;
+        document.getElementById("auth-screen").classList.remove("hidden");
+        document.getElementById("app-interface").classList.add("hidden");
+        return;
+      }
       await signOut(auth);
     };
 
-    // Save active state to Firestore
+    // Save active state to Firestore or LocalStorage (for Demo)
     window.saveState = async () => {
       if (!currentUser) return;
+      if (currentUser.uid === "demo-user") {
+        try {
+          localStorage.setItem("cadence_demo_state", JSON.stringify(window.cadenceState));
+        } catch (e) {}
+        return;
+      }
       try {
         const userDoc = doc(db, "users", currentUser.uid);
         await setDoc(userDoc, {
@@ -860,6 +201,7 @@
 
     // Realtime Auth State Listener
     onAuthStateChanged(auth, async (user) => {
+      if (currentUser?.uid === "demo-user") return;
       currentUser = user;
       const authScreen = document.getElementById("auth-screen");
       const appInterface = document.getElementById("app-interface");
@@ -918,8 +260,10 @@
         Sign in with your Google account to access your personal pipeline, dealership facilities, coaching dossiers, and next-visit rhythm.
       </p>
 
-      <div class="mt-8">
-        <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-cadence-charcoal text-white hover:bg-black px-5 py-3 rounded-xl text-xs font-semibold tracking-wide transition shadow-sm">
+      <div id="auth-error-msg" class="hidden mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg text-left"></div>
+
+      <div class="mt-8 space-y-3">
+        <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-cadence-charcoal text-white hover:bg-black px-5 py-3 rounded-xl text-xs font-semibold tracking-wide transition shadow-sm cursor-pointer">
           <svg class="w-4 h-4" viewBox="0 0 24 24">
             <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"/>
             <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.9z"/>
@@ -927,6 +271,11 @@
             <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.2-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/>
           </svg>
           Continue with Google
+        </button>
+
+        <button onclick="loginAsDemo()" class="w-full flex items-center justify-center gap-2 bg-cadence-sandLight border border-cadence-border hover:bg-cadence-sand text-cadence-charcoal px-5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition cursor-pointer">
+          <i data-lucide="play" class="w-3.5 h-3.5 text-cadence-accent"></i>
+          Explore Cockpit in Demo Mode
         </button>
       </div>
 
@@ -943,7 +292,7 @@
     <header class="sticky top-0 z-40 glass-nav border-b border-cadence-border px-6 py-3 transition-all">
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
         <div class="flex items-center gap-6">
-          <button onclick="switchView('overview')" class="flex items-center gap-3 group focus:outline-none text-left">
+          <button onclick="switchView('overview')" class="flex items-center gap-3 group focus:outline-none text-left cursor-pointer">
             <svg class="w-8 h-8 transition-transform group-hover:scale-105" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M42 22 L22 42 C16 48 16 56 22 62 L42 82 C48 88 56 88 62 82 L72 72 C75 69 75 64 72 61 C69 58 64 58 61 61 L54 68 C52 70 48 70 46 68 L32 54 C30 52 30 48 32 46 L46 32 C48 30 52 30 54 32 L64 42 L76 30" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M62 20 H82 V40" stroke="#121417" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -955,15 +304,15 @@
           </button>
 
           <nav class="hidden md:flex items-center space-x-1 pl-4 border-l border-cadence-border">
-            <button id="nav-btn-overview" onclick="switchView('overview')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors">Overview</button>
-            <button id="nav-btn-pipeline" onclick="switchView('pipeline')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Pipeline</button>
-            <button id="nav-btn-coaching" onclick="switchView('coaching')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Coaching & Roster</button>
-            <button id="nav-btn-workspace" onclick="switchView('workspace')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors">Workspace Feed</button>
+            <button id="nav-btn-overview" onclick="switchView('overview')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors cursor-pointer">Overview</button>
+            <button id="nav-btn-pipeline" onclick="switchView('pipeline')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors cursor-pointer">Pipeline</button>
+            <button id="nav-btn-coaching" onclick="switchView('coaching')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors cursor-pointer">Coaching & Roster</button>
+            <button id="nav-btn-workspace" onclick="switchView('workspace')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors cursor-pointer">Workspace Feed</button>
           </nav>
         </div>
 
         <div class="flex items-center gap-3">
-          <button onclick="toggleCopilot()" class="flex items-center gap-2 bg-cadence-sandLight border border-cadence-border hover:bg-cadence-sand text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-2xs">
+          <button onclick="toggleCopilot()" class="flex items-center gap-2 bg-cadence-sandLight border border-cadence-border hover:bg-cadence-sand text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-2xs cursor-pointer">
             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cadence-accent"></i>
             <span class="hidden sm:inline">Ask Gemini</span>
           </button>
@@ -972,7 +321,7 @@
           <div class="flex items-center gap-2.5 pl-3 border-l border-cadence-border">
             <img id="user-avatar" class="w-7 h-7 rounded-full border border-cadence-border object-cover" src="" alt="Avatar">
             <span id="user-name" class="text-xs font-medium text-cadence-charcoal hidden sm:inline max-w-[120px] truncate">User</span>
-            <button onclick="logout()" title="Sign Out" class="p-1 hover:text-red-600 text-cadence-slate transition">
+            <button onclick="logout()" title="Sign Out" class="p-1 hover:text-red-600 text-cadence-slate transition cursor-pointer">
               <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
           </div>
@@ -991,8 +340,8 @@
             <p class="text-xs text-cadence-slate mt-1">Cross-dealership performance, coaching frequency, and live deliverables.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="switchView('pipeline')" class="px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">View Pipeline</button>
-            <button onclick="switchView('coaching')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Manage Locations & Visits</button>
+            <button onclick="switchView('pipeline')" class="px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition cursor-pointer">View Pipeline</button>
+            <button onclick="switchView('coaching')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">Manage Locations & Visits</button>
           </div>
         </div>
 
@@ -1019,7 +368,7 @@
         <div class="bg-white border border-cadence-border rounded-xl p-6">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Location Health & Assigned Staff</h2>
-            <button onclick="promptAddLocation()" class="text-xs text-cadence-accent font-semibold hover:underline">+ New Facility</button>
+            <button onclick="promptAddLocation()" class="text-xs text-cadence-accent font-semibold hover:underline cursor-pointer">+ New Facility</button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="overview-stores-container">
             <!-- Rendered dynamically -->
@@ -1034,7 +383,7 @@
             <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Personal Pipeline</h1>
             <p class="text-xs text-cadence-slate mt-1">High-priority leadership items, reviews, and store deliverables.</p>
           </div>
-          <button onclick="promptAddTask()" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ New Task</button>
+          <button onclick="promptAddTask()" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ New Task</button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="pipeline-board">
           <!-- Rendered dynamically -->
@@ -1049,8 +398,8 @@
             <p class="text-xs text-cadence-slate mt-1">Store rosters, individual growth dossiers, and visit drill tracking.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="promptAddLocation()" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition">+ New Location</button>
-            <button onclick="promptAddMember()" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add Member</button>
+            <button onclick="promptAddLocation()" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition cursor-pointer">+ New Location</button>
+            <button onclick="promptAddMember()" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add Member</button>
           </div>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1079,7 +428,7 @@
               <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-lg">
                 <div class="text-xs font-bold text-cadence-charcoal">Training Matrix Review Request</div>
                 <div class="text-[11px] text-cadence-slate mt-1">"Can you review the observation criteria before tomorrow's visit?"</div>
-                <button onclick="addTask('Review observation criteria from email', 'Email Action')" class="mt-2 text-[10px] font-semibold px-2.5 py-1 bg-white border border-cadence-border rounded hover:bg-cadence-sand transition">+ Push to Pipeline</button>
+                <button onclick="addTask('Review observation criteria from email', 'Email Action')" class="mt-2 text-[10px] font-semibold px-2.5 py-1 bg-white border border-cadence-border rounded hover:bg-cadence-sand transition cursor-pointer">+ Push to Pipeline</button>
               </div>
             </div>
           </div>
@@ -1110,7 +459,7 @@
           <i data-lucide="sparkles" class="w-4 h-4 text-cadence-accent"></i>
           <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Cadence Copilot</span>
         </div>
-        <button onclick="toggleCopilot()" class="p-1 rounded hover:bg-cadence-sand transition">
+        <button onclick="toggleCopilot()" class="p-1 rounded hover:bg-cadence-sand transition cursor-pointer">
           <i data-lucide="x" class="w-4 h-4 text-cadence-slate"></i>
         </button>
       </div>
@@ -1121,7 +470,7 @@
       </div>
       <div class="p-3 border-t border-cadence-border flex gap-2">
         <input id="copilot-input" type="text" placeholder="Ask Cadence Copilot..." class="flex-1 text-xs px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') sendCopilot()">
-        <button onclick="sendCopilot()" class="px-3 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">Send</button>
+        <button onclick="sendCopilot()" class="px-3 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">Send</button>
       </div>
     </aside>
   </div>
@@ -1132,30 +481,36 @@
       renderOverview();
       renderPipeline();
       renderRoster();
-      lucide.createIcons();
+      if (window.lucide) {
+        lucide.createIcons();
+      }
     }
     window.renderAll = renderAll;
 
     function switchView(viewName) {
       ['overview', 'pipeline', 'coaching', 'workspace'].forEach(v => {
-        document.getElementById(`view-${v}`).classList.add('hidden');
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
         const btn = document.getElementById(`nav-btn-${v}`);
-        if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors';
+        if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors cursor-pointer';
       });
-      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      const activeEl = document.getElementById(`view-${viewName}`);
+      if (activeEl) activeEl.classList.remove('hidden');
       const activeBtn = document.getElementById(`nav-btn-${viewName}`);
-      if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors';
-      lucide.createIcons();
+      if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors cursor-pointer';
+      if (window.lucide) {
+        lucide.createIcons();
+      }
     }
     window.switchView = switchView;
 
     function renderOverview() {
       const container = document.getElementById('overview-stores-container');
       const state = window.cadenceState;
-      if (!container) return;
+      if (!container || !state) return;
 
-      container.innerHTML = state.locations.map(loc => {
-        const staff = state.employees.filter(e => e.locId === loc.id);
+      container.innerHTML = (state.locations || []).map(loc => {
+        const staff = (state.employees || []).filter(e => e.locId === loc.id);
         return `
           <div class="p-4 bg-cadence-canvas border border-cadence-border rounded-lg hover:border-cadence-charcoal transition cursor-pointer" onclick="switchView('coaching'); selectEmployee('${staff[0]?.id || ''}')">
             <div class="flex items-center justify-between">
@@ -1167,15 +522,17 @@
         `;
       }).join('');
 
-      document.getElementById('stat-locations-count').textContent = `${state.locations.length} Facilities`;
-      const inFlightCount = state.tasks.filter(t => t.stage === 'in-flight').length;
-      document.getElementById('stat-active-tasks').textContent = `${inFlightCount} In Flight`;
+      const countEl = document.getElementById('stat-locations-count');
+      if (countEl) countEl.textContent = `${(state.locations || []).length} Facilities`;
+      const inFlightCount = (state.tasks || []).filter(t => t.stage === 'in-flight').length;
+      const tasksEl = document.getElementById('stat-active-tasks');
+      if (tasksEl) tasksEl.textContent = `${inFlightCount} In Flight`;
     }
 
     function renderPipeline() {
       const board = document.getElementById('pipeline-board');
       const state = window.cadenceState;
-      if (!board) return;
+      if (!board || !state) return;
 
       const cols = [
         { id: 'next', label: 'Next Focus' },
@@ -1184,7 +541,7 @@
       ];
 
       board.innerHTML = cols.map(col => {
-        const colTasks = state.tasks.filter(t => t.stage === col.id);
+        const colTasks = (state.tasks || []).filter(t => t.stage === col.id);
         return `
           <div class="bg-white border border-cadence-border rounded-xl p-4 flex flex-col min-h-[350px]">
             <div class="flex items-center justify-between pb-3 border-b border-cadence-border mb-3">
@@ -1197,7 +554,7 @@
                   <div class="font-medium text-cadence-charcoal">${t.text}</div>
                   <div class="flex items-center justify-between mt-2 pt-2 border-t border-cadence-border/60">
                     <span class="text-[10px] text-cadence-slate uppercase font-semibold">${t.tag}</span>
-                    <button onclick="advanceTask('${t.id}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Advance →</button>
+                    <button onclick="advanceTask('${t.id}')" class="text-[10px] text-cadence-accent font-semibold hover:underline cursor-pointer">Advance →</button>
                   </div>
                 </div>
               `).join('')}
@@ -1208,7 +565,7 @@
     }
 
     function advanceTask(id) {
-      const t = window.cadenceState.tasks.find(x => x.id === id);
+      const t = (window.cadenceState.tasks || []).find(x => x.id === id);
       if (!t) return;
       if (t.stage === 'next') t.stage = 'in-flight';
       else if (t.stage === 'in-flight') t.stage = 'done';
@@ -1219,6 +576,7 @@
     window.advanceTask = advanceTask;
 
     function addTask(text, tag) {
+      if (!window.cadenceState.tasks) window.cadenceState.tasks = [];
       window.cadenceState.tasks.push({ id: 't-' + Date.now(), text, stage: 'next', tag: tag || 'General' });
       window.saveState();
       renderPipeline();
@@ -1235,10 +593,10 @@
     function renderRoster() {
       const list = document.getElementById('roster-list');
       const state = window.cadenceState;
-      if (!list) return;
+      if (!list || !state) return;
 
-      list.innerHTML = state.locations.map(loc => {
-        const members = state.employees.filter(e => e.locId === loc.id);
+      list.innerHTML = (state.locations || []).map(loc => {
+        const members = (state.employees || []).filter(e => e.locId === loc.id);
         return `
           <div class="bg-white border border-cadence-border rounded-xl p-4">
             <div class="flex items-center justify-between pb-2 border-b border-cadence-border mb-3">
@@ -1268,7 +626,7 @@
 
     function renderDossier() {
       const state = window.cadenceState;
-      const emp = state.employees.find(e => e.id === state.selectedEmpId);
+      const emp = (state.employees || []).find(e => e.id === state.selectedEmpId);
       const card = document.getElementById('employee-dossier-card');
       if (!card) return;
 
@@ -1277,15 +635,15 @@
         return;
       }
 
-      const loc = state.locations.find(l => l.id === emp.locId);
-      const plans = state.visitPlans[emp.id] || [];
+      const loc = (state.locations || []).find(l => l.id === emp.locId);
+      const plans = (state.visitPlans && state.visitPlans[emp.id]) || [];
 
       card.innerHTML = `
         <div class="bg-white border border-cadence-border rounded-xl p-6 space-y-6">
           <div class="flex items-start justify-between pb-4 border-b border-cadence-border">
             <div>
               <h2 class="text-xl font-bold text-cadence-charcoal">${emp.name}</h2>
-              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name} (${loc?.type})</p>
+              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name || 'Dealership'} (${loc?.type || 'OEM Dealership'})</p>
             </div>
             <span class="text-[10px] font-semibold px-2.5 py-1 bg-cadence-sand rounded text-cadence-charcoal">Drive Dossier</span>
           </div>
@@ -1301,7 +659,7 @@
                 <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Next Visit Coaching Plan</span>
                 <p class="text-[11px] text-cadence-slate">Observation drills & targets for next facility walk.</p>
               </div>
-              <button onclick="suggestVisitDrills('${emp.name}', '${emp.goal}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1">
+              <button onclick="suggestVisitDrills('${emp.name}', '${emp.goal}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer">
                 <i data-lucide="sparkles" class="w-3 h-3"></i> Gemini Suggest
               </button>
             </div>
@@ -1310,12 +668,12 @@
               ${plans.length > 0 ? plans.map(p => `
                 <div class="flex items-center justify-between p-2.5 bg-white border border-cadence-border rounded-lg text-xs">
                   <div class="flex items-center gap-2.5">
-                    <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlan('${emp.id}', '${p.id}')" class="rounded border-cadence-border text-cadence-charcoal focus:ring-0">
+                    <input type="checkbox" ${p.done ? 'checked' : ''} onchange="togglePlan('${emp.id}', '${p.id}')" class="rounded border-cadence-border text-cadence-charcoal focus:ring-0 cursor-pointer">
                     <span class="${p.done ? 'line-through text-cadence-slate' : 'text-cadence-charcoal font-medium'}">${p.text}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="text-[10px] text-cadence-slate bg-cadence-canvas px-2 py-0.5 rounded border border-cadence-border">${p.type}</span>
-                    <button onclick="addTask('Follow up with ${emp.name}: ${p.text}', '${loc?.name}')" class="text-[10px] text-cadence-accent font-semibold hover:underline">Sync</button>
+                    <button onclick="addTask('Follow up with ${emp.name}: ${p.text}', '${loc?.name || 'Coaching'}')" class="text-[10px] text-cadence-accent font-semibold hover:underline cursor-pointer">Sync</button>
                   </div>
                 </div>
               `).join('') : '<div class="text-[11px] text-cadence-slate italic p-2">No drills scheduled yet.</div>'}
@@ -1323,12 +681,14 @@
 
             <div class="flex gap-2">
               <input id="input-new-visit-task" type="text" placeholder="Add observation drill..." class="flex-1 text-xs px-3 py-2 bg-white border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent" onkeydown="if(event.key==='Enter') addVisitTask('${emp.id}')">
-              <button onclick="addVisitTask('${emp.id}')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition">+ Add</button>
+              <button onclick="addVisitTask('${emp.id}')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add</button>
             </div>
           </div>
         </div>
       `;
-      lucide.createIcons();
+      if (window.lucide) {
+        lucide.createIcons();
+      }
     }
 
     function togglePlan(empId, planId) {
@@ -1342,6 +702,7 @@
     function addVisitTask(empId) {
       const input = document.getElementById('input-new-visit-task');
       if (!input || !input.value.trim()) return;
+      if (!window.cadenceState.visitPlans) window.cadenceState.visitPlans = {};
       if (!window.cadenceState.visitPlans[empId]) window.cadenceState.visitPlans[empId] = [];
       window.cadenceState.visitPlans[empId].push({
         id: 'vp-' + Date.now(),
@@ -1359,6 +720,7 @@
       const name = prompt('Dealership or Facility Name:');
       if (!name) return;
       const type = prompt('Facility Type (OEM Dealership, Used Car Dealership, or Service Centre):') || 'OEM Dealership';
+      if (!window.cadenceState.locations) window.cadenceState.locations = [];
       window.cadenceState.locations.push({ id: 'loc-' + Date.now(), name, type });
       window.saveState();
       renderOverview();
@@ -1370,9 +732,11 @@
       const name = prompt('Team Member Name:');
       if (!name) return;
       const role = prompt('Role/Title:') || 'Sales Consultant';
-      const locId = window.cadenceState.locations[0]?.id || 'loc-1';
+      const locId = window.cadenceState.locations?.[0]?.id || 'loc-1';
       const empId = 'emp-' + Date.now();
+      if (!window.cadenceState.employees) window.cadenceState.employees = [];
       window.cadenceState.employees.push({ id: empId, name, role, locId, goal: 'Master customer experience & dealership sales process.' });
+      if (!window.cadenceState.visitPlans) window.cadenceState.visitPlans = {};
       window.cadenceState.visitPlans[empId] = [];
       window.saveState();
       selectEmployee(empId);
@@ -1382,12 +746,13 @@
 
     function toggleCopilot() {
       const drawer = document.getElementById('copilot-drawer');
-      drawer.classList.toggle('translate-x-full');
+      if (drawer) drawer.classList.toggle('translate-x-full');
     }
     window.toggleCopilot = toggleCopilot;
 
     function sendCopilot() {
       const input = document.getElementById('copilot-input');
+      if (!input) return;
       const text = input.value.trim();
       if (!text) return;
       const container = document.getElementById('copilot-messages');
@@ -1404,6 +769,7 @@
     function suggestVisitDrills(empName, goal) {
       toggleCopilot();
       const container = document.getElementById('copilot-messages');
+      if (!container) return;
       container.innerHTML += `
         <div class="p-3 bg-cadence-sandLight rounded-lg text-cadence-charcoal space-y-2">
           <div class="font-bold">Suggested Drills for ${empName}:</div>
@@ -1412,12 +778,19 @@
             <li><strong>Customer Discovery Drill:</strong> Observe qualification questions on walk-in consultations.</li>
             <li><strong>Objection Turnaround:</strong> Shadow trade-in appraisal consultation review.</li>
           </ul>
-          <button onclick="addTask('Conduct discovery drills with ${empName}', 'Coaching')" class="mt-2 text-[10px] font-semibold px-2 py-1 bg-cadence-charcoal text-white rounded">+ Add to Pipeline</button>
+          <button onclick="addTask('Conduct discovery drills with ${empName}', 'Coaching')" class="mt-2 text-[10px] font-semibold px-2 py-1 bg-cadence-charcoal text-white rounded cursor-pointer">+ Add to Pipeline</button>
         </div>
       `;
       container.scrollTop = container.scrollHeight;
     }
     window.suggestVisitDrills = suggestVisitDrills;
+
+    // Initial render call when script loads
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    });
   </script>
 </body>
 </html>
