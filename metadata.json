@@ -1,6 +1,6 @@
 {
-  "name": "Cadence — Executive & Dealership Cockpit",
-  "description": "Executive & Dealership Cockpit for personal management, coaching dossiers, and dealership training project tracking.",
+  "name": "Cadence — Dealership Coaching Hub",
+  "description": "A clean, professional space for dealership leaders to manage store visits, coaching notes, and team action items.",
   "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
