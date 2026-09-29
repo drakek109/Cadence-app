@@ -31,8 +31,19 @@ function generateDynamicFallbackAnalysis(prompt, context) {
   const logs = context?.visitLogs || [];
   const content = context?.contentCreation || {};
   const contentProjects = content?.projectsList || [];
+  const tax = context?.industryTaxonomy || {
+    locationLabel: 'Location',
+    locationsLabel: 'Locations',
+    visitLabel: 'Visit',
+    walkLabel: 'Location Visit',
+    memberLabel: 'Team Member'
+  };
 
-  // Overdue stores
+  const locSingular = tax.locationLabel || 'Location';
+  const locPlural = tax.locationsLabel || 'Locations';
+  const visitLabel = tax.visitLabel || 'Visit';
+
+  // Overdue stores / locations
   const overdueStores = stores.filter(s => s.cadenceStatus === 'Time for a Visit');
   const dueSoonStores = stores.filter(s => s.cadenceStatus === 'Due Soon');
   const onTrackStores = stores.filter(s => s.cadenceStatus === 'On Track');
@@ -47,19 +58,19 @@ function generateDynamicFallbackAnalysis(prompt, context) {
   if (p.includes('priorit') || p.includes('weekly') || p.includes('briefing') || p.includes('overview') || p.includes('analyze everything') || p.includes('what should i do')) {
     let result = `### 📊 Executive Platform Priority Briefing\n\n`;
 
-    // 1. Store Cadence Urgency
+    // 1. Store / Location Cadence Urgency
     if (overdueStores.length > 0) {
-      result += `**1. 🚨 Dealership Visit Urgency:**\n`;
+      result += `**1. 🚨 ${locSingular} ${visitLabel} Urgency:**\n`;
       overdueStores.forEach(s => {
-        result += `• **${s.name}** is **${s.daysSinceLastVisit} days** since your last walk (Rhythm: every ${s.cadenceRhythmDays}d). Scheduled staff: ${s.assignedStaff.join(', ') || 'Team'}.\n`;
+        result += `• **${s.name}** is **${s.daysSinceLastVisit} days** since your last ${visitLabel.toLowerCase()} (Rhythm: every ${s.cadenceRhythmDays}d). Assigned staff: ${s.assignedStaff.join(', ') || 'Team'}.\n`;
       });
     } else if (dueSoonStores.length > 0) {
-      result += `**1. ⚡ Upcoming Store Visit:**\n`;
+      result += `**1. ⚡ Upcoming ${locSingular} ${visitLabel}:**\n`;
       dueSoonStores.forEach(s => {
-        result += `• **${s.name}** is due soon (${s.daysSinceLastVisit} days since last visit). Plan your stop this week.\n`;
+        result += `• **${s.name}** is due soon (${s.daysSinceLastVisit} days since last ${visitLabel.toLowerCase()}). Plan your stop this week.\n`;
       });
     } else {
-      result += `**1. ✅ Store Visits:** All ${stores.length} dealership locations are currently on track.\n`;
+      result += `**1. ✅ ${visitLabel} Cadence:** All ${stores.length} ${locPlural.toLowerCase()} are currently on track.\n`;
     }
 
     // 2. High-Impact Tasks
@@ -89,38 +100,38 @@ function generateDynamicFallbackAnalysis(prompt, context) {
     // 4. Coaching Focus
     result += `\n**4. 👥 Recommended 1-on-1 Coaching Stops:**\n`;
     team.slice(0, 2).forEach(e => {
-      result += `• **${e.name}** (${e.role} @ ${e.storeName}): Focus on *"Today's Goal: ${e.currentCoachingGoal}"*. Pending drills: ${e.pendingDrills.map(d => d.text).join('; ') || 'Schedule floor observation'}.\n`;
+      result += `• **${e.name}** (${e.role} @ ${e.storeName}): Focus on *"Today's Goal: ${e.currentCoachingGoal}"*. Pending drills: ${e.pendingDrills.map(d => d.text).join('; ') || 'Schedule 1-on-1 observation'}.\n`;
     });
 
     return result;
   }
 
-  if (p.includes('store') || p.includes('visit') || p.includes('location') || p.includes('where to go')) {
-    let result = `### 🚗 Store Visit Cadence & Route Strategy\n\n`;
-    result += `Here is the current visit rhythm across your **${stores.length} dealerships**:\n\n`;
+  if (p.includes('store') || p.includes('visit') || p.includes('location') || p.includes('where to go') || p.includes('site') || p.includes('facility') || p.includes('branch')) {
+    let result = `### 📍 ${locSingular} ${visitLabel} Cadence & Route Strategy\n\n`;
+    result += `Here is the current rhythm across your **${stores.length} ${locPlural.toLowerCase()}**:\n\n`;
     stores.forEach(s => {
       const statusIcon = s.cadenceStatus === 'Time for a Visit' ? '🚨' : s.cadenceStatus === 'Due Soon' ? '⚡' : '✅';
       result += `• ${statusIcon} **${s.name}** (${s.type}):\n`;
       result += `  - **Status:** ${s.cadenceStatus} (${s.daysSinceLastVisit} days ago, cadence target: every ${s.cadenceRhythmDays} days)\n`;
       result += `  - **Assigned Team:** ${s.assignedStaff.join(', ') || 'No staff assigned'}\n`;
       if (s.latestVisitLog) {
-        result += `  - **Last Walk Takeaway (${s.latestVisitLog.date}):** "${s.latestVisitLog.notes}"\n`;
+        result += `  - **Last ${visitLabel} Takeaway (${s.latestVisitLog.date}):** "${s.latestVisitLog.notes}"\n`;
       }
     });
 
     if (overdueStores.length > 0) {
-      result += `\n**Recommendation:** Head to **${overdueStores[0].name}** first. Prioritize shadowing on the showroom floor or service drive.`;
+      result += `\n**Recommendation:** Head to **${overdueStores[0].name}** first for a prioritized ${visitLabel.toLowerCase()} session.`;
     }
     return result;
   }
 
   if (p.includes('content') || p.includes('training') || p.includes('module') || p.includes('video') || p.includes('script')) {
     let result = `### 🎬 Training Content Creation Pipeline\n\n`;
-    result += `You currently have **${content.totalProjects || 0} training projects** (${content.publishedCount || 0} published, ${content.activeProjectsCount || 0} in active production):\n\n`;
+    result += `You currently have **${content.totalProjects || 0} training projects** (${content.completeCount || content.publishedCount || 0} complete, ${content.activeProjectsCount || 0} in active pipeline):\n\n`;
     contentProjects.forEach(cp => {
       result += `• **${cp.title}** [${cp.priority} Priority]\n`;
       result += `  - Format: ${cp.format} | Target: ${cp.audience} (${cp.targetStore})\n`;
-      result += `  - Stage: **${cp.stage.toUpperCase()}** | Progress: ${cp.progressPercent}\n`;
+      result += `  - Stage: **${(cp.stage || '').toUpperCase()}** | Progress: ${cp.progressPercent}\n`;
       result += `  - Target Launch: ${cp.targetDate || 'TBD'}\n`;
       if (cp.incompleteMilestones && cp.incompleteMilestones.length > 0) {
         result += `  - Next Milestone: ${cp.incompleteMilestones[0]}\n`;
@@ -130,7 +141,7 @@ function generateDynamicFallbackAnalysis(prompt, context) {
     return result;
   }
 
-  if (p.includes('team') || p.includes('coach') || p.includes('drill') || p.includes('employee') || p.includes('people')) {
+  if (p.includes('team') || p.includes('coach') || p.includes('drill') || p.includes('employee') || p.includes('people') || p.includes('staff')) {
     let result = `### 👥 Team Member Coaching Dossier\n\n`;
     team.forEach(e => {
       result += `• **${e.name}** — ${e.role} @ **${e.storeName}**\n`;
@@ -146,10 +157,10 @@ function generateDynamicFallbackAnalysis(prompt, context) {
     return result;
   }
 
-  if (p.includes('log') || p.includes('history') || p.includes('walks')) {
-    let result = `### 📋 Recent Store Visit History & Observations\n\n`;
+  if (p.includes('log') || p.includes('history') || p.includes('walks') || p.includes('visits')) {
+    let result = `### 📋 Recent ${locSingular} ${visitLabel} History & Observations\n\n`;
     if (logs.length === 0) {
-      result += `No visit logs recorded yet. Click "Log Walk" on any store card to save your observations.\n`;
+      result += `No ${visitLabel.toLowerCase()} logs recorded yet. Click "Log ${visitLabel}" on any card to save your observations.\n`;
     } else {
       logs.slice(0, 5).forEach(v => {
         result += `• **${v.date} — ${v.store}** (${v.visitType}):\n`;
@@ -162,13 +173,13 @@ function generateDynamicFallbackAnalysis(prompt, context) {
   }
 
   // General grounded synthesis
-  let result = `### ⚡ Cadence Dealership Analysis\n\n`;
+  let result = `### ⚡ Cadence Executive Analysis\n\n`;
   result += `Here is your current operational snapshot:\n\n`;
-  result += `• **Stores:** ${stores.length} total (${overdueStores.length} overdue, ${dueSoonStores.length} due soon, ${onTrackStores.length} on track)\n`;
-  result += `• **Team:** ${team.length} specialists coached across ${logs.length} logged visits\n`;
+  result += `• **${locPlural}:** ${stores.length} total (${overdueStores.length} overdue, ${dueSoonStores.length} due soon, ${onTrackStores.length} on track)\n`;
+  result += `• **Team:** ${team.length} specialists coached across ${logs.length} logged ${visitLabel.toLowerCase()}s\n`;
   result += `• **Tasks:** ${activeTasks.length} active action items (${overdueTasks.length} overdue)\n`;
-  result += `• **Training Content:** ${content.totalProjects || 0} modules in roadmap (${content.activeProjectsCount || 0} active, ${content.publishedCount || 0} published)\n\n`;
-  result += `**Top Action Recommendation:** ${overdueStores.length > 0 ? `Schedule a floor walk at **${overdueStores[0].name}**.` : `Review pending milestones on your active training modules.`}`;
+  result += `• **Training Content:** ${content.totalProjects || 0} modules in roadmap (${content.activeProjectsCount || 0} active, ${content.completeCount || content.publishedCount || 0} complete)\n\n`;
+  result += `**Top Action Recommendation:** ${overdueStores.length > 0 ? `Schedule a ${visitLabel.toLowerCase()} at **${overdueStores[0].name}**.` : `Review pending milestones on your active training modules.`}`;
   return result;
 }
 
@@ -184,19 +195,33 @@ app.post('/api/gemini/generate', async (req, res) => {
   if (apiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey });
+      const tax = context?.industryTaxonomy || {
+        locationLabel: 'Location',
+        locationsLabel: 'Locations',
+        visitLabel: 'Visit',
+        memberLabel: 'Team Member'
+      };
       
-      const systemInstruction = `You are the Cadence Executive AI Assistant & Automotive Coaching Strategist.
-You act as a senior automotive field operations director, coaching partner, and dealership performance advisor.
+      const systemInstruction = `You are the Cadence Executive AI Assistant & Multi-Unit Field Operations Strategist.
+You act as a senior field operations director, coaching partner, and multi-unit performance advisor across retail, healthcare, hospitality, fitness, corporate, dealership, or any multi-unit industry.
+
+The user has customized their industry terminology:
+- Singular Location: "${tax.locationLabel || 'Location'}"
+- Plural Locations: "${tax.locationsLabel || 'Locations'}"
+- Visit / Evaluation: "${tax.visitLabel || 'Visit'}"
+- Relevant roles, store types, and task categories are provided in the snapshot taxonomy.
+
+Always tailor your terminology, headings, and recommendations to the user's specific naming convention and industry context.
 
 Your core purpose is to analyze EVERYTHING across the Cadence platform and:
-1. Provide deep, actionable operational insights across stores, team members, visit logs, tasks, and training content.
-2. Answer questions accurately and directly using the real live data in the user's platform.
-3. Prioritize high-impact actions for the user: tell them exactly which dealership needs a visit first, which team member needs coaching, which urgent tasks are overdue, and which training content modules are ready to produce or launch.
+1. Provide deep, actionable operational insights across locations, team members, visit logs, tasks, and training content.
+2. Answer questions accurately and directly using the real live data in the user's platform snapshot.
+3. Prioritize high-impact actions for the user: tell them exactly which ${tax.locationLabel || 'location'} needs a ${tax.visitLabel || 'visit'} first, which team member needs coaching, which urgent tasks are overdue, and which training content modules are ready to produce or launch.
 
 Tone & Style Guidelines:
-- Professional, direct, practical, and conversational—the voice of an experienced, hands-on automotive sales director or VP of training.
-- No generic AI fluff or corporate buzzwords. Refer directly to the user's real store names, real employee names, actual visit logs, actual task titles, and real content project titles.
-- Use clean Markdown with bold headings, bullet points, and prioritized action numbers (e.g., 1. 🚨 Urgent Store Visit, 2. ⚡ In-Flight Task, 3. 🎯 Coaching Opportunity).
+- Professional, direct, practical, and conversational—the voice of an experienced, hands-on field operations VP or director.
+- No generic AI fluff or corporate buzzwords. Refer directly to the user's real location names, real employee names, actual visit logs, actual task titles, and real content project titles.
+- Use clean Markdown with bold headings, bullet points, and prioritized action numbers (e.g., 1. 🚨 Urgent ${(tax.locationLabel || 'Location')} ${(tax.visitLabel || 'Visit')}, 2. ⚡ In-Flight Task, 3. 🎯 Coaching Opportunity).
 - When asked to analyze or prioritize, synthesize connections across multiple areas (e.g., connect an employee's goal or a recent visit log observation to a training content module in development or an open task).
 
 You have full real-time access to the user's Cadence platform data provided in the prompt context.`;

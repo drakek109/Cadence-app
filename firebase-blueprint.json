@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "userProfile": {
+      "title": "UserProfile",
+      "description": "User account document storing full Cadence dealership coaching state, roster, visit logs, tasks, and content creation pipeline.",
+      "type": "object",
+      "properties": {
+        "locations": {
+          "type": "array",
+          "description": "List of dealership locations and store visit cadence configuration."
+        },
+        "employees": {
+          "type": "array",
+          "description": "Team roster and staff coaching profiles."
+        },
+        "visitPlans": {
+          "type": "object",
+          "description": "Observation drills and visit plans keyed by employee ID."
+        },
+        "coachingHistory": {
+          "type": "array",
+          "description": "History of completed observation debriefs and coaching takeaways."
+        },
+        "tasks": {
+          "type": "array",
+          "description": "Action items and pipeline tasks."
+        },
+        "visitLogs": {
+          "type": "array",
+          "description": "Completed dealership visit log history."
+        },
+        "contentProjects": {
+          "type": "array",
+          "description": "Training content creation projects roadmap and milestones."
+        },
+        "workspaceReports": {
+          "type": "array",
+          "description": "Google Docs and Google Sheets export references."
+        },
+        "taxonomy": {
+          "type": "object",
+          "description": "User-configured terminology, naming conventions, task categories, location types, and team member roles for any industry."
+        },
+        "geminiApiKey": {
+          "type": "string",
+          "description": "Optional custom Gemini API key."
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "userProfile",
+      "description": "User-isolated document storing all dealership coaching data."
+    }
+  }
+}

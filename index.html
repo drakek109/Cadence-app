@@ -256,7 +256,7 @@
           title: "10-Minute Video Lead Response on Pre-Owned Inventory",
           format: "Full Module",
           audience: "BDC / Internet",
-          stage: "published",
+          stage: "complete",
           priority: "Medium",
           targetStore: "loc-2",
           targetDate: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
@@ -274,7 +274,7 @@
           title: "EV Range & Home Charging Questions Cheat Sheet",
           format: "Quick Reference Guide",
           audience: "Sales Specialists",
-          stage: "scripting",
+          stage: "storyboard",
           priority: "Medium",
           targetStore: "loc-1",
           targetDate: new Date(Date.now() + 12 * 86400000).toISOString().split('T')[0],
@@ -306,13 +306,124 @@
         }
       ],
       workspaceReports: [],
+      taxonomy: {
+        industry: "Automotive Dealerships",
+        locationLabel: "Store",
+        locationsLabel: "Stores",
+        visitLabel: "Visit",
+        walkLabel: "Store Walk",
+        locationTypes: [
+          "New Car Dealership",
+          "Used Car Dealership",
+          "Service Centre",
+          "Dealership Campus"
+        ],
+        memberRoles: [
+          "Sales Specialist",
+          "Used Car Specialist",
+          "Service Advisor",
+          "BDC Specialist",
+          "Sales Manager",
+          "Finance Manager"
+        ],
+        taskCategories: [
+          "Operations",
+          "Strategy",
+          "Coaching",
+          "Audits & Checks",
+          "Follow-ups"
+        ],
+        drillTypes: [
+          "Shadow & Observe",
+          "Practice",
+          "1-on-1 Check-In",
+          "Skills Assessment",
+          "Floor Walk"
+        ]
+      },
       geminiApiKey: ""
+    };
+
+    const defaultTaxonomy = defaultData.taxonomy;
+
+    const INDUSTRY_TEMPLATES = {
+      dealership: {
+        name: "Automotive Dealerships",
+        locationLabel: "Store",
+        locationsLabel: "Stores",
+        visitLabel: "Visit",
+        walkLabel: "Store Walk",
+        locationTypes: ["New Car Dealership", "Used Car Dealership", "Service Centre", "Dealership Campus"],
+        memberRoles: ["Sales Specialist", "Used Car Specialist", "Service Advisor", "BDC Specialist", "Sales Manager", "Finance Manager"],
+        taskCategories: ["Operations", "Strategy", "Coaching", "Audits & Checks", "Inventory & Desking"],
+        drillTypes: ["Shadow & Observe", "Practice", "1-on-1 Check-In", "Vehicle Walkaround", "Trade Desking"]
+      },
+      retail: {
+        name: "Retail & Franchise",
+        locationLabel: "Store",
+        locationsLabel: "Stores",
+        visitLabel: "Audit",
+        walkLabel: "Store Audit",
+        locationTypes: ["Flagship Store", "Mall Boutique", "Outlet Location", "Express Store", "Franchise Branch"],
+        memberRoles: ["Store Manager", "Assistant Store Manager", "Sales Associate", "Visual Merchandiser", "Cashier Lead", "Inventory Specialist"],
+        taskCategories: ["Visual Merchandising", "Inventory & Stock", "Customer Experience", "Loss Prevention", "Staff Coaching", "Store Operations"],
+        drillTypes: ["Greeting & Discovery", "Upselling & Add-ons", "Floor Walk Observation", "Cashwrap Experience", "1-on-1 Check-In"]
+      },
+      healthcare: {
+        name: "Healthcare & Clinics",
+        locationLabel: "Clinic",
+        locationsLabel: "Clinics",
+        visitLabel: "Round",
+        walkLabel: "Clinical Round",
+        locationTypes: ["Primary Care Clinic", "Specialty Practice", "Urgent Care Centre", "Outpatient Facility", "Diagnostic Lab"],
+        memberRoles: ["Clinic Director", "Lead Practitioner", "Registered Nurse", "Medical Assistant", "Patient Coordinator", "Practice Manager"],
+        taskCategories: ["Patient Experience", "Clinical Compliance", "Safety & Hygiene", "Staff Rostering", "Quality Assurance", "Billing & Intake"],
+        drillTypes: ["Patient Intake Walkthrough", "Protocol Compliance Check", "Bedside Communication", "1-on-1 Coaching", "Equipment Audit"]
+      },
+      hospitality: {
+        name: "Hospitality & Dining",
+        locationLabel: "Location",
+        locationsLabel: "Locations",
+        visitLabel: "Walk",
+        walkLabel: "Shift Walk",
+        locationTypes: ["Full-Service Restaurant", "Fast Casual Venue", "Bar & Lounge", "Catering & Prep Hub", "Hotel Dining"],
+        memberRoles: ["General Manager", "Head Chef / Kitchen Lead", "Shift Supervisor", "Lead Server", "Bartender", "Host Coordinator"],
+        taskCategories: ["Food Safety & Health", "Guest Hospitality", "Kitchen Line Operations", "Speed of Service", "Labor & Cost Control", "Team Training"],
+        drillTypes: ["Table Greeting & Touch", "Menu Upselling", "Shift Changeover Walk", "1-on-1 Check-In", "Station Audit"]
+      },
+      corporate: {
+        name: "Corporate & Banking",
+        locationLabel: "Branch",
+        locationsLabel: "Branches",
+        visitLabel: "Review",
+        walkLabel: "Branch Review",
+        locationTypes: ["Regional Branch", "Commercial Banking Centre", "Satellite Office", "Client Advisory Hub"],
+        memberRoles: ["Branch Manager", "Relationship Manager", "Financial Advisor", "Client Service Associate", "Operations Officer"],
+        taskCategories: ["Client Retention", "Sales Pipeline", "Compliance & Risk", "Team Coaching", "Operations Audit", "Follow-ups"],
+        drillTypes: ["Client Discovery Call", "Pitch & Proposal Review", "Audit & Controls Walk", "1-on-1 Coaching", "Pipeline Debrief"]
+      },
+      custom: {
+        name: "Custom / Agnostic",
+        locationLabel: "Location",
+        locationsLabel: "Locations",
+        visitLabel: "Visit",
+        walkLabel: "Site Visit",
+        locationTypes: ["Main Facility", "Branch Office", "Field Site", "Regional Center"],
+        memberRoles: ["Team Lead", "Operations Specialist", "Field Coordinator", "Associate", "Manager"],
+        taskCategories: ["Operations", "Strategy", "Quality & Compliance", "Team Coaching", "Follow-ups"],
+        drillTypes: ["Shadow & Observe", "Practice", "1-on-1 Check-In", "Process Assessment", "Site Inspection"]
+      }
     };
 
     let currentUser = null;
     let unsubscribeFirestore = null;
 
     window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
+
+    function getTaxonomy() {
+      return (window.cadenceState && window.cadenceState.taxonomy) ? window.cadenceState.taxonomy : defaultTaxonomy;
+    }
+    window.getTaxonomy = getTaxonomy;
 
     // Display inline auth error (avoids window.alert in iframe)
     function showAuthError(msg) {
@@ -339,12 +450,26 @@
       }
     };
 
-    // Demo Mode Sign-In Action
+    // Demo Mode Sign-In Action with local persistence
     window.loginAsDemo = () => {
+      localStorage.setItem("cadence_active_session", "demo");
       const saved = localStorage.getItem("cadence_demo_state");
       if (saved) {
         try {
-          window.cadenceState = { ...defaultData, ...JSON.parse(saved) };
+          const parsed = JSON.parse(saved);
+          window.cadenceState = {
+            ...defaultData,
+            ...parsed,
+            locations: parsed.locations || defaultData.locations,
+            employees: parsed.employees || defaultData.employees,
+            visitPlans: parsed.visitPlans || defaultData.visitPlans,
+            coachingHistory: parsed.coachingHistory || defaultData.coachingHistory,
+            tasks: parsed.tasks || defaultData.tasks,
+            visitLogs: parsed.visitLogs || defaultData.visitLogs,
+            contentProjects: parsed.contentProjects || defaultData.contentProjects,
+            workspaceReports: parsed.workspaceReports || [],
+            taxonomy: parsed.taxonomy || defaultTaxonomy
+          };
         } catch (e) {
           window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
         }
@@ -362,13 +487,21 @@
       document.getElementById("app-interface").classList.remove("hidden");
       document.getElementById("user-name").textContent = currentUser.displayName;
       document.getElementById("user-avatar").src = currentUser.photoURL;
+      applyTaxonomyLabels();
       window.renderAll();
     };
 
-    // Sign-Out Action
+    // Sign-Out Action: ensure state is saved before terminating session
     window.logout = async () => {
+      try {
+        await window.saveState();
+      } catch (err) {
+        console.warn("Logout save error:", err);
+      }
       if (unsubscribeFirestore) unsubscribeFirestore();
       setWorkspaceToken(null);
+      localStorage.removeItem("cadence_active_session");
+
       if (currentUser?.uid === "demo-user") {
         currentUser = null;
         document.getElementById("auth-screen").classList.remove("hidden");
@@ -384,7 +517,9 @@
       if (currentUser.uid === "demo-user") {
         try {
           localStorage.setItem("cadence_demo_state", JSON.stringify(window.cadenceState));
-        } catch (e) {}
+        } catch (e) {
+          console.warn("Local storage save error:", e);
+        }
         return;
       }
       try {
@@ -395,13 +530,38 @@
           visitPlans: window.cadenceState.visitPlans || {},
           coachingHistory: window.cadenceState.coachingHistory || [],
           tasks: window.cadenceState.tasks || [],
+          visitLogs: window.cadenceState.visitLogs || [],
+          contentProjects: window.cadenceState.contentProjects || [],
           workspaceReports: window.cadenceState.workspaceReports || [],
-          geminiApiKey: window.cadenceState.geminiApiKey || ""
+          taxonomy: window.cadenceState.taxonomy || defaultTaxonomy,
+          geminiApiKey: window.cadenceState.geminiApiKey || "",
+          updatedAt: new Date().toISOString()
         }, { merge: true });
+
+        // Local cache safety net
+        try {
+          localStorage.setItem("cadence_cache_" + currentUser.uid, JSON.stringify(window.cadenceState));
+        } catch (e) {}
       } catch (err) {
-        console.error("Save error:", err);
+        console.error("Firestore save error:", err);
       }
     };
+
+    // Auto-save on page close / unload
+    window.addEventListener("beforeunload", () => {
+      if (currentUser) {
+        window.saveState();
+      }
+    });
+
+    // Check for auto-resume of demo session when tab is reopened
+    if (localStorage.getItem("cadence_active_session") === "demo") {
+      setTimeout(() => {
+        if (!auth.currentUser && localStorage.getItem("cadence_active_session") === "demo") {
+          window.loginAsDemo();
+        }
+      }, 200);
+    }
 
     // Realtime Auth State Listener
     onAuthStateChanged(auth, async (user) => {
@@ -411,6 +571,7 @@
       const appInterface = document.getElementById("app-interface");
 
       if (user) {
+        localStorage.setItem("cadence_active_session", "google");
         authScreen.classList.add("hidden");
         appInterface.classList.remove("hidden");
 
@@ -418,7 +579,7 @@
         document.getElementById("user-name").textContent = user.displayName || user.email;
         document.getElementById("user-avatar").src = user.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
 
-        // Listen to User's Firestore Document
+        // Listen to User's Firestore Document for full cross-session persistence
         const userDocRef = doc(db, "users", user.uid);
         unsubscribeFirestore = onSnapshot(userDocRef, (snap) => {
           if (snap.exists()) {
@@ -429,20 +590,29 @@
               visitPlans: data.visitPlans || defaultData.visitPlans,
               coachingHistory: data.coachingHistory || defaultData.coachingHistory,
               tasks: data.tasks || defaultData.tasks,
+              visitLogs: data.visitLogs || defaultData.visitLogs,
+              contentProjects: data.contentProjects || defaultData.contentProjects,
               workspaceReports: data.workspaceReports || [],
+              taxonomy: data.taxonomy || defaultTaxonomy,
               geminiApiKey: data.geminiApiKey || "",
               selectedEmpId: window.cadenceState.selectedEmpId || data.employees?.[0]?.id || "emp-1"
             };
           } else {
             // First time login: seed default structure
-            setDoc(userDocRef, defaultData);
+            setDoc(userDocRef, {
+              ...defaultData,
+              createdAt: new Date().toISOString()
+            });
             window.cadenceState = { ...defaultData, selectedEmpId: "emp-1" };
           }
+          applyTaxonomyLabels();
           window.renderAll();
         });
       } else {
-        authScreen.classList.remove("hidden");
-        appInterface.classList.add("hidden");
+        if (localStorage.getItem("cadence_active_session") !== "demo") {
+          authScreen.classList.remove("hidden");
+          appInterface.classList.add("hidden");
+        }
       }
     });
   </script>
@@ -519,7 +689,12 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <button onclick="openDebriefModal()" class="hidden sm:flex items-center gap-1.5 bg-white border border-cadence-border hover:bg-cadence-sandLight text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer" title="Quick summary ready to share with store GM">
+          <button onclick="openTaxonomyModal()" class="flex items-center gap-1.5 bg-white border border-cadence-border hover:bg-cadence-sandLight text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer" title="Customize terminology, categories, store types and roles for any industry">
+            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-cadence-accent"></i>
+            <span class="hidden sm:inline">Custom Naming</span>
+          </button>
+
+          <button onclick="openDebriefModal()" class="hidden sm:flex items-center gap-1.5 bg-white border border-cadence-border hover:bg-cadence-sandLight text-cadence-charcoal px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer" title="Quick summary ready to share with GM or Director">
             <i data-lucide="file-text" class="w-3.5 h-3.5 text-cadence-slate"></i>
             <span>Share Notes</span>
           </button>
@@ -537,9 +712,73 @@
               <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
           </div>
+
+          <!-- Mobile 3-Lined Hamburger Menu Button -->
+          <button id="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open Navigation Menu" class="md:hidden p-2 rounded-lg text-cadence-charcoal hover:bg-cadence-sandLight border border-cadence-border transition cursor-pointer flex items-center justify-center">
+            <i data-lucide="menu" id="mobile-menu-icon" class="w-5 h-5"></i>
+          </button>
         </div>
       </div>
     </header>
+
+    <!-- Mobile Navigation Drawer / Dropdown -->
+    <div id="mobile-nav-menu" class="hidden md:hidden fixed inset-x-0 top-[65px] bg-white border-b border-cadence-border shadow-2xl z-40 p-4 transition-all duration-200">
+      <div class="space-y-1.5">
+        <button onclick="mobileNavSwitch('overview')" id="mobile-nav-btn-overview" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-cadence-charcoal"></i>
+            <span>Overview</span>
+          </div>
+          <span class="text-[10px] text-cadence-slate font-medium">Dashboard</span>
+        </button>
+        <button onclick="mobileNavSwitch('pipeline')" id="mobile-nav-btn-pipeline" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <i data-lucide="check-square" class="w-4 h-4 text-cadence-accent"></i>
+            <span>Tasks & Pipeline</span>
+          </div>
+          <span class="text-[10px] text-cadence-slate font-medium">Action Items</span>
+        </button>
+        <button onclick="mobileNavSwitch('coaching')" id="mobile-nav-btn-coaching" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <i data-lucide="users" class="w-4 h-4 text-cadence-accent"></i>
+            <span>Team & Coaching</span>
+          </div>
+          <span class="text-[10px] text-cadence-slate font-medium">Roster & Drills</span>
+        </button>
+        <button onclick="mobileNavSwitch('content')" id="mobile-nav-btn-content" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <i data-lucide="clapperboard" class="w-4 h-4 text-cadence-accent"></i>
+            <span>Content Creation</span>
+          </div>
+          <span class="text-[10px] font-semibold text-cadence-charcoal bg-cadence-sand px-2 py-0.5 rounded">Training</span>
+        </button>
+        <button onclick="mobileNavSwitch('workspace')" id="mobile-nav-btn-workspace" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <i data-lucide="calendar" class="w-4 h-4 text-cadence-accent"></i>
+            <span>Calendar & Notes</span>
+          </div>
+          <span class="text-[10px] text-cadence-slate font-medium">Google Sync</span>
+        </button>
+      </div>
+
+      <div class="mt-3.5 pt-3 border-t border-cadence-border space-y-2">
+        <button onclick="toggleMobileMenu(false); openTaxonomyModal();" class="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-cadence-sandLight border border-cadence-border text-xs font-semibold text-cadence-charcoal hover:bg-cadence-sand cursor-pointer">
+          <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-cadence-accent"></i>
+          <span>Customize Terminology & Categories</span>
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="toggleMobileMenu(false); openDebriefModal();" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-cadence-canvas border border-cadence-border text-xs font-semibold text-cadence-charcoal hover:bg-cadence-sandLight cursor-pointer">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-cadence-slate"></i>
+            <span>Share Notes</span>
+          </button>
+          <button onclick="toggleMobileMenu(false); toggleCopilot();" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-cadence-charcoal text-white text-xs font-semibold hover:bg-black cursor-pointer">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cadence-green"></i>
+            <span>Ask Assistant</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="mobile-nav-backdrop" onclick="toggleMobileMenu(false)" class="hidden md:hidden fixed inset-0 top-[65px] bg-black/30 backdrop-blur-2xs z-30 transition-opacity"></div>
 
     <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
@@ -548,32 +787,40 @@
       <div id="view-overview" class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
           <div>
-            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Store & Team Overview</h1>
-            <p class="text-xs text-cadence-slate mt-1">See how your store visits are pacing, what's on your plate, and how the team is doing.</p>
+            <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal" id="header-overview-title">Stores & Team Overview</h1>
+            <p class="text-xs text-cadence-slate mt-1" id="header-overview-sub">See how your store visits are pacing, what's on your plate, and how the team is doing.</p>
           </div>
           <div class="flex items-center gap-2">
             <button onclick="openDebriefModal()" class="sm:hidden px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition cursor-pointer">Share Notes</button>
             <button onclick="switchView('pipeline')" class="px-3.5 py-2 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition cursor-pointer">View Tasks</button>
-            <button onclick="switchView('coaching')" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">Stores & Visits</button>
+            <button onclick="switchView('coaching')" id="btn-overview-nav-stores" class="px-3.5 py-2 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">Stores & Visits</button>
           </div>
         </div>
 
         <!-- Metrics -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
             <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Tasks</div>
             <div class="text-2xl font-bold mt-2 text-cadence-charcoal" id="stat-active-tasks">0 In Progress</div>
             <div class="text-xs text-cadence-slate mt-1" id="stat-active-tasks-sub">Things you're currently working on</div>
           </div>
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Visit Pace</div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate" id="stat-cadence-title">Visit Pace</div>
             <div class="text-2xl font-bold mt-2 text-cadence-green" id="stat-cadence-percent">100% On Track</div>
             <div class="text-xs text-cadence-slate mt-1" id="stat-cadence-sub">Keeping your regular store visit rhythm</div>
           </div>
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Stores</div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate" id="stat-locations-title">Active Stores</div>
             <div class="text-2xl font-bold mt-2 text-cadence-accent" id="stat-locations-count">0 Stores</div>
-            <div class="text-xs text-cadence-slate mt-1" id="stat-locations-sub">Showrooms, pre-owned, and service centres</div>
+            <div class="text-xs text-cadence-slate mt-1" id="stat-locations-sub">Showrooms, pre-owned & service</div>
+          </div>
+          <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs cursor-pointer hover:border-cadence-charcoal transition" onclick="switchView('content')">
+            <div class="flex items-center justify-between">
+              <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Training Content</div>
+              <span class="text-[10px] text-cadence-accent font-semibold flex items-center gap-0.5">View →</span>
+            </div>
+            <div class="text-2xl font-bold mt-2 text-cadence-charcoal" id="stat-overview-content">0 Projects</div>
+            <div class="text-xs text-cadence-slate mt-1" id="stat-overview-content-sub">In production and review</div>
           </div>
         </div>
 
@@ -581,13 +828,50 @@
         <div class="bg-white border border-cadence-border rounded-xl p-6">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Stores & Team Members</h2>
-              <p class="text-[11px] text-cadence-slate mt-0.5">Click any store to see the team and plan your next visit.</p>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal" id="overview-stores-title">Stores & Team Members</h2>
+              <p class="text-[11px] text-cadence-slate mt-0.5" id="overview-stores-sub">Click any store to see the team and plan your next visit.</p>
             </div>
-            <button onclick="openModal('modal-add-location')" class="text-xs text-cadence-accent font-semibold hover:underline cursor-pointer">+ Add Store</button>
+            <button onclick="openModal('modal-add-location')" id="btn-overview-add-store" class="text-xs text-cadence-accent font-semibold hover:underline cursor-pointer">+ Add Store</button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="overview-stores-container">
             <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Training Content Creation Spotlight Widget -->
+        <div class="bg-white border border-cadence-border rounded-xl p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-cadence-border">
+            <div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="clapperboard" class="w-4 h-4 text-cadence-accent"></i>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Training Content Creation Pipeline</h2>
+                <span id="overview-content-count-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-cadence-sand text-cadence-charcoal">0 Projects</span>
+              </div>
+              <p class="text-[11px] text-cadence-slate mt-0.5">Live status of video modules, roleplay drills, and cheat sheets currently in production.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="openContentProjectModal()" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Project
+              </button>
+              <button onclick="switchView('content')" class="px-3 py-1.5 bg-white border border-cadence-border text-cadence-charcoal rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition flex items-center gap-1 cursor-pointer">
+                <span>Manage All</span> <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-cadence-slate"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stage Distribution Progress Bar & Stage Pills -->
+          <div class="bg-cadence-canvas/70 border border-cadence-border rounded-xl p-3.5 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs" id="overview-content-stages-pills">
+              <!-- Dynamically populated with stage badges -->
+            </div>
+            <div class="w-full h-2 bg-cadence-border/60 rounded-full overflow-hidden flex" id="overview-content-pipeline-bar">
+              <!-- Dynamically populated segments -->
+            </div>
+          </div>
+
+          <!-- Spotlight Content Project Cards Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5" id="overview-content-cards-container">
+            <!-- Dynamically populated with active/in-progress training projects -->
           </div>
         </div>
 
@@ -597,10 +881,10 @@
             <div>
               <div class="flex items-center gap-2">
                 <i data-lucide="clipboard-list" class="w-4 h-4 text-cadence-accent"></i>
-                <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Store Visit Log History</h2>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal" id="visit-logs-title">Store Visit Log History</h2>
                 <span id="visit-logs-count-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-cadence-sand text-cadence-charcoal">0 Visits Logged</span>
               </div>
-              <p class="text-[11px] text-cadence-slate mt-0.5">Every dealership walk and coaching session logged in Cadence. Ready for Google Sheets export.</p>
+              <p class="text-[11px] text-cadence-slate mt-0.5" id="visit-logs-sub">Every dealership walk and coaching session logged in Cadence. Ready for Google Sheets export.</p>
             </div>
             <div class="flex items-center gap-2">
               <select id="filter-vlog-store" onchange="renderVisitLogsTable()" class="text-xs px-2.5 py-1.5 bg-white border border-cadence-border rounded-lg text-cadence-charcoal focus:outline-none focus:border-cadence-accent">
@@ -609,7 +893,7 @@
               <button onclick="exportVisitLogsToGoogleSheets()" class="px-3.5 py-1.5 bg-green-50 border border-green-200 text-green-800 rounded-lg text-xs font-semibold hover:bg-green-100 transition flex items-center gap-1.5 cursor-pointer shadow-2xs" title="Export this log table into a new Google Sheet in your Google Drive">
                 <i data-lucide="sheet" class="w-3.5 h-3.5 text-green-700"></i> Export to Google Sheets
               </button>
-              <button onclick="openLogVisitModal()" class="px-3.5 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition flex items-center gap-1.5 cursor-pointer">
+              <button onclick="openLogVisitModal()" id="btn-overview-log-visit" class="px-3.5 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition flex items-center gap-1.5 cursor-pointer">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i> Log Visit
               </button>
             </div>
@@ -621,8 +905,8 @@
               <thead>
                 <tr class="text-[10px] uppercase font-bold text-cadence-slate border-b border-cadence-border pb-2">
                   <th class="py-2 pr-3">Date</th>
-                  <th class="py-2 px-3">Dealership / Store</th>
-                  <th class="py-2 px-3">Visit Type</th>
+                  <th class="py-2 px-3" id="th-vlog-store">Dealership / Store</th>
+                  <th class="py-2 px-3" id="th-vlog-type">Visit Type</th>
                   <th class="py-2 px-3">Coaching Focus & Staff</th>
                   <th class="py-2 px-3">Observations & Takeaways</th>
                   <th class="py-2 pl-3 text-right">Actions</th>
@@ -641,7 +925,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
           <div>
             <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Tasks & Action Items</h1>
-            <p class="text-xs text-cadence-slate mt-1">Keep track of follow-ups, store commitments, and things to review.</p>
+            <p class="text-xs text-cadence-slate mt-1" id="pipeline-sub">Keep track of follow-ups, store commitments, and things to review.</p>
           </div>
           <div class="flex items-center gap-3">
             <!-- Filter -->
@@ -669,10 +953,10 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cadence-border">
           <div>
             <h1 class="text-2xl font-bold tracking-tight text-cadence-charcoal">Team & Coaching</h1>
-            <p class="text-xs text-cadence-slate mt-1">Store rosters, one-on-one coaching notes, and visit drills.</p>
+            <p class="text-xs text-cadence-slate mt-1" id="coaching-sub">Store rosters, one-on-one coaching notes, and visit drills.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openModal('modal-add-location')" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition cursor-pointer">+ Add Store</button>
+            <button onclick="openModal('modal-add-location')" id="btn-coaching-add-store" class="px-3 py-1.5 bg-white border border-cadence-border rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition cursor-pointer">+ Add Store</button>
             <button onclick="openModal('modal-add-member')" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add Team Member</button>
           </div>
         </div>
@@ -714,17 +998,17 @@
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
             <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Active Pipeline</div>
             <div class="text-2xl font-bold mt-2 text-cadence-charcoal" id="stat-content-active">0 Active</div>
-            <div class="text-xs text-cadence-slate mt-1">In idea, script, or production stages</div>
+            <div class="text-xs text-cadence-slate mt-1">Backlog, Storyboard, Prod, Review</div>
           </div>
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
             <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">In Production & Review</div>
             <div class="text-2xl font-bold mt-2 text-cadence-accent" id="stat-content-in-prod">0 Projects</div>
-            <div class="text-xs text-cadence-slate mt-1">Filming, editing & GM review</div>
+            <div class="text-xs text-cadence-slate mt-1">Production & Review & Editing</div>
           </div>
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Published & Live</div>
-            <div class="text-2xl font-bold mt-2 text-cadence-green" id="stat-content-published">0 Published</div>
-            <div class="text-xs text-cadence-slate mt-1">Active in store training libraries</div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Complete</div>
+            <div class="text-2xl font-bold mt-2 text-cadence-green" id="stat-content-published">0 Complete</div>
+            <div class="text-xs text-cadence-slate mt-1">Finished & ready across locations</div>
           </div>
           <div class="p-5 bg-white border border-cadence-border rounded-xl shadow-xs">
             <div class="text-[11px] font-semibold uppercase tracking-wider text-cadence-slate">Milestone Progress</div>
@@ -986,25 +1270,31 @@
       <input type="hidden" id="input-loc-edit-id">
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Store / Dealership Name</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-loc-name">Store / Dealership Name</label>
           <input id="input-loc-name" type="text" placeholder="e.g. Westside Pre-Owned" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent">
         </div>
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Store Type</label>
-          <select id="input-loc-type" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
-            <option value="New Car Dealership">New Car Dealership (OEM)</option>
-            <option value="Used Car Dealership">Used Car Dealership</option>
-            <option value="Service Centre">Service & Care Centre</option>
-            <option value="Dealership Campus">Dealership Campus / Group HQ</option>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block font-semibold text-cadence-slate" id="modal-loc-type-label">Store Type</label>
+            <button type="button" onclick="openTaxonomyModal()" class="text-[10px] text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer">
+              <i data-lucide="sliders-horizontal" class="w-2.5 h-2.5"></i> Custom Types
+            </button>
+          </div>
+          <select id="input-loc-type" onchange="handleLocTypeSelectChange()" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
+            <!-- Dynamically populated from taxonomy.locationTypes -->
           </select>
+          <div id="wrapper-custom-loctype-inline" class="hidden mt-2 flex gap-1.5">
+            <input id="input-loc-type-inline" type="text" placeholder="Type new location type..." class="flex-1 px-2.5 py-1.5 border border-cadence-border rounded text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); saveInlineLocType();}">
+            <button type="button" onclick="saveInlineLocType()" class="px-2.5 py-1.5 bg-cadence-charcoal text-white rounded text-xs font-semibold cursor-pointer">Add</button>
+          </div>
         </div>
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Store Physical Address</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-loc-address">Store Physical Address</label>
           <input id="input-loc-address" type="text" placeholder="e.g. 1850 Auto Mall Way, Suite 100, Westside" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent">
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-semibold text-cadence-slate mb-1">Visit Rhythm (Cadence)</label>
+            <label class="block font-semibold text-cadence-slate mb-1" id="label-loc-cadence">Visit Rhythm (Cadence)</label>
             <select id="input-loc-cadence" onchange="toggleCustomCadenceInput()" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
               <option value="7">Every week (7 days)</option>
               <option value="10">Every 10 days</option>
@@ -1016,7 +1306,7 @@
             </select>
           </div>
           <div>
-            <label class="block font-semibold text-cadence-slate mb-1">Last Visited Date</label>
+            <label class="block font-semibold text-cadence-slate mb-1" id="label-loc-date">Last Visited Date</label>
             <input id="input-loc-date" type="date" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
           </div>
         </div>
@@ -1034,7 +1324,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="closeModal('modal-add-location')" class="px-3.5 py-2 text-xs font-semibold text-cadence-slate hover:bg-cadence-sandLight rounded-lg transition cursor-pointer">Cancel</button>
-          <button onclick="saveLocationForm()" class="px-4 py-2 bg-cadence-charcoal text-white text-xs font-semibold rounded-lg hover:bg-black transition cursor-pointer">Save Store</button>
+          <button onclick="saveLocationForm()" id="btn-save-location" class="px-4 py-2 bg-cadence-charcoal text-white text-xs font-semibold rounded-lg hover:bg-black transition cursor-pointer">Save Store</button>
         </div>
       </div>
     </div>
@@ -1046,13 +1336,13 @@
       <div class="flex items-center justify-between pb-3 border-b border-cadence-border">
         <div class="flex items-center gap-2">
           <i data-lucide="clipboard-check" class="w-4 h-4 text-cadence-accent"></i>
-          <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal">Log Store Visit</h3>
+          <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal" id="modal-log-visit-title">Log Store Visit</h3>
         </div>
         <button onclick="closeModal('modal-log-visit')" class="text-cadence-slate hover:text-cadence-charcoal cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Dealership / Store</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-vlog-store">Dealership / Store</label>
           <select id="input-vlog-store" onchange="onLogVisitStoreChange()" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
             <!-- Dynamically populated -->
           </select>
@@ -1060,19 +1350,23 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-semibold text-cadence-slate mb-1">Visit Date</label>
+            <label class="block font-semibold text-cadence-slate mb-1" id="label-vlog-date">Visit Date</label>
             <input id="input-vlog-date" type="date" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
           </div>
           <div>
-            <label class="block font-semibold text-cadence-slate mb-1">Visit Type</label>
-            <select id="input-vlog-type" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
-              <option value="Routine Cadence Walk">Routine Cadence Walk</option>
-              <option value="Floor Coaching & Observation">Floor Coaching & Observation</option>
-              <option value="1-on-1 Coaching Session">1-on-1 Coaching Session</option>
-              <option value="Showroom Floor Audit">Showroom Floor Audit</option>
-              <option value="Executive / GM Review">Executive / GM Review</option>
-              <option value="Service Drive Check-in">Service Drive Check-in</option>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-semibold text-cadence-slate" id="modal-log-visit-type-label">Visit Type</label>
+              <button type="button" onclick="openTaxonomyModal()" class="text-[10px] text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer">
+                <i data-lucide="sliders-horizontal" class="w-2.5 h-2.5"></i> Custom Types
+              </button>
+            </div>
+            <select id="input-vlog-type" onchange="handleVlogTypeSelectChange()" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
+              <!-- Dynamically populated from taxonomy.drillTypes -->
             </select>
+            <div id="wrapper-custom-vlogtype-inline" class="hidden mt-2 flex gap-1.5">
+              <input id="input-vlog-type-inline" type="text" placeholder="Type new visit type..." class="flex-1 px-2.5 py-1.5 border border-cadence-border rounded text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); saveInlineVlogType();}">
+              <button type="button" onclick="saveInlineVlogType()" class="px-2.5 py-1.5 bg-cadence-charcoal text-white rounded text-xs font-semibold cursor-pointer">Add</button>
+            </div>
           </div>
         </div>
 
@@ -1096,7 +1390,7 @@
         <span class="text-[11px] text-cadence-slate">Saves to in-platform visit history & ready for Sheets export.</span>
         <div class="flex gap-2">
           <button onclick="closeModal('modal-log-visit')" class="px-3.5 py-2 text-xs font-semibold text-cadence-slate hover:bg-cadence-sandLight rounded-lg transition cursor-pointer">Cancel</button>
-          <button onclick="saveVisitLogForm()" class="px-4 py-2 bg-cadence-charcoal text-white text-xs font-semibold rounded-lg hover:bg-black transition cursor-pointer flex items-center gap-1.5">
+          <button onclick="saveVisitLogForm()" id="btn-save-vlog" class="px-4 py-2 bg-cadence-charcoal text-white text-xs font-semibold rounded-lg hover:bg-black transition cursor-pointer flex items-center gap-1.5">
             <i data-lucide="check" class="w-3.5 h-3.5 text-cadence-green"></i> Save Visit Log
           </button>
         </div>
@@ -1151,11 +1445,11 @@
           <div>
             <label class="block font-semibold text-cadence-slate mb-1">Current Stage</label>
             <select id="input-cp-stage" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
-              <option value="backlog">💡 Backlog / Concept</option>
-              <option value="scripting">✍️ Scripting & Outline</option>
-              <option value="production">🎬 Filming & Production</option>
+              <option value="backlog">📋 Backlog</option>
+              <option value="storyboard">📐 Storyboard</option>
+              <option value="production">🎬 Production</option>
               <option value="review">🔍 Review & Editing</option>
-              <option value="published">🚀 Published & Live</option>
+              <option value="complete">✅ Complete</option>
             </select>
           </div>
           <div>
@@ -1173,7 +1467,7 @@
         </div>
 
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Target Dealership Scope</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-cp-scope">Target Store Scope</label>
           <select id="input-cp-store" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
             <option value="all">All Stores (Group-Wide Standard)</option>
             <!-- Dynamically populated with locations -->
@@ -1242,16 +1536,19 @@
           <input id="input-member-name" type="text" placeholder="e.g. Alex Henderson" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent">
         </div>
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Role</label>
-          <select id="input-member-role" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
-            <option value="Sales Specialist">Sales Specialist</option>
-            <option value="Senior Sales Consultant">Senior Sales Consultant</option>
-            <option value="Used Car Specialist">Used Car Specialist</option>
-            <option value="Service Advisor">Service Advisor</option>
-            <option value="BDC Specialist">BDC / Internet Specialist</option>
-            <option value="Finance Manager">Finance / Business Manager</option>
-            <option value="Upcoming Sales Manager">Upcoming Sales Manager</option>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block font-semibold text-cadence-slate">Role</label>
+            <button type="button" onclick="openTaxonomyModal()" class="text-[10px] text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer">
+              <i data-lucide="sliders-horizontal" class="w-2.5 h-2.5"></i> Custom Roles
+            </button>
+          </div>
+          <select id="input-member-role" onchange="handleMemberRoleSelectChange()" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
+            <!-- Dynamically populated from taxonomy.memberRoles -->
           </select>
+          <div id="wrapper-custom-memberrole-inline" class="hidden mt-2 flex gap-1.5">
+            <input id="input-member-role-inline" type="text" placeholder="Type new role..." class="flex-1 px-2.5 py-1.5 border border-cadence-border rounded text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); saveInlineMemberRole();}">
+            <button type="button" onclick="saveInlineMemberRole()" class="px-2.5 py-1.5 bg-cadence-charcoal text-white rounded text-xs font-semibold cursor-pointer">Add</button>
+          </div>
         </div>
         <div>
           <label class="block font-semibold text-cadence-slate mb-1">Store Location</label>
@@ -1293,14 +1590,19 @@
             </select>
           </div>
           <div>
-            <label class="block font-semibold text-cadence-slate mb-1">Category</label>
-            <select id="input-task-tag" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
-              <option value="Operations">Operations</option>
-              <option value="Strategy">Strategy</option>
-              <option value="Coaching">Coaching</option>
-              <option value="Audits & Checks">Audits & Checks</option>
-              <option value="Follow-ups">Follow-ups</option>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-semibold text-cadence-slate">Category / Tag</label>
+              <button type="button" onclick="openTaxonomyModal()" class="text-[10px] text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer">
+                <i data-lucide="sliders-horizontal" class="w-2.5 h-2.5"></i> Custom
+              </button>
+            </div>
+            <select id="input-task-tag" onchange="handleTaskTagSelectChange()" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
+              <!-- Dynamically populated from taxonomy.taskCategories -->
             </select>
+            <div id="wrapper-custom-tasktag-inline" class="hidden mt-2 flex gap-1.5">
+              <input id="input-task-tag-inline" type="text" placeholder="Type new category..." class="flex-1 px-2.5 py-1.5 border border-cadence-border rounded text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); saveInlineTaskTag();}">
+              <button type="button" onclick="saveInlineTaskTag()" class="px-2.5 py-1.5 bg-cadence-charcoal text-white rounded text-xs font-semibold cursor-pointer">Add</button>
+            </div>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -1364,7 +1666,7 @@
       <div class="flex items-center justify-between pb-3 border-b border-cadence-border">
         <div class="flex items-center gap-2">
           <i data-lucide="file-text" class="w-4 h-4 text-cadence-accent"></i>
-          <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal">Store Visit Summary</h3>
+          <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal" id="modal-debrief-title">Store Visit Summary</h3>
         </div>
         <button onclick="closeModal('modal-export-debrief')" class="text-cadence-slate hover:text-cadence-charcoal cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
@@ -1374,7 +1676,7 @@
       </div>
 
       <div class="flex items-center justify-between pt-3 border-t border-cadence-border">
-        <span class="text-[11px] text-cadence-slate">Clean summary ready to share with your General Manager.</span>
+        <span class="text-[11px] text-cadence-slate">Clean summary ready to share with leadership.</span>
         <div class="flex gap-2">
           <button onclick="copyDebriefToClipboard()" class="px-3 py-1.5 bg-white border border-cadence-border text-cadence-charcoal rounded-lg text-xs font-semibold hover:bg-cadence-sandLight transition flex items-center gap-1.5 cursor-pointer">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Text
@@ -1399,19 +1701,19 @@
       <div class="flex items-center justify-between pb-3 border-b border-cadence-border">
         <div class="flex items-center gap-2">
           <i data-lucide="calendar-plus" class="w-4 h-4 text-cadence-accent"></i>
-          <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal">Schedule Store Visit</h3>
+          <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal" id="modal-cal-title">Schedule Store Visit</h3>
         </div>
         <button onclick="closeModal('modal-schedule-visit')" class="text-cadence-slate hover:text-cadence-charcoal cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Store Location</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-cal-store">Store Location</label>
           <select id="input-cal-store" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent bg-white">
             <!-- Dynamically populated -->
           </select>
         </div>
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Visit Focus / Title</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-cal-title">Visit Focus / Title</label>
           <input id="input-cal-title" type="text" placeholder="e.g. Bi-weekly Store Walk & 1-on-1 Coaching" class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent">
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -1425,7 +1727,7 @@
           </div>
         </div>
         <div>
-          <label class="block font-semibold text-cadence-slate mb-1">Notes / Plan for this Walk</label>
+          <label class="block font-semibold text-cadence-slate mb-1" id="label-cal-notes">Notes / Plan for this Walk</label>
           <textarea id="input-cal-notes" rows="2" placeholder="e.g. Shadow walkaround discovery questions and review trade desking." class="w-full px-3 py-2 border border-cadence-border rounded-lg focus:outline-none focus:border-cadence-accent"></textarea>
         </div>
       </div>
@@ -1475,8 +1777,479 @@
     <button onclick="hideWorkspaceToast()" class="text-white/60 hover:text-white cursor-pointer"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
   </div>
 
+  <!-- 9. CUSTOM TERMINOLOGY & INDUSTRY TAXONOMY SETTINGS MODAL -->
+  <div id="modal-taxonomy-settings" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white border border-cadence-border rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-cadence-border">
+        <div class="flex items-center gap-2.5">
+          <div class="p-1.5 rounded-lg bg-cadence-sand border border-cadence-border text-cadence-charcoal">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-cadence-accent"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-cadence-charcoal">Custom Terminology & Taxonomy</h3>
+            <p class="text-[11px] text-cadence-slate mt-0.5">Adapt Cadence to any industry: dealerships, retail stores, healthcare clinics, hospitality, or corporate branches.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-taxonomy-settings')" class="text-cadence-slate hover:text-cadence-charcoal cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto custom-scroll space-y-4 pr-1 text-xs">
+        <!-- 1. Quick 1-Click Industry Templates -->
+        <div class="space-y-1.5">
+          <label class="block font-bold text-cadence-charcoal uppercase tracking-wider text-[11px]">1-Click Industry Templates</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="tax-template-buttons">
+            <button type="button" onclick="applyIndustryTemplate('dealership')" class="p-2.5 rounded-xl border border-cadence-border text-left hover:border-cadence-charcoal bg-cadence-canvas transition flex items-center gap-2 cursor-pointer">
+              <span class="text-base">🚗</span>
+              <div>
+                <div class="font-bold text-cadence-charcoal text-[11px]">Auto Dealership</div>
+                <div class="text-[9px] text-cadence-slate">Stores & Walks</div>
+              </div>
+            </button>
+            <button type="button" onclick="applyIndustryTemplate('retail')" class="p-2.5 rounded-xl border border-cadence-border text-left hover:border-cadence-charcoal bg-white transition flex items-center gap-2 cursor-pointer">
+              <span class="text-base">🛍️</span>
+              <div>
+                <div class="font-bold text-cadence-charcoal text-[11px]">Retail & Franchise</div>
+                <div class="text-[9px] text-cadence-slate">Stores & Audits</div>
+              </div>
+            </button>
+            <button type="button" onclick="applyIndustryTemplate('healthcare')" class="p-2.5 rounded-xl border border-cadence-border text-left hover:border-cadence-charcoal bg-white transition flex items-center gap-2 cursor-pointer">
+              <span class="text-base">🏥</span>
+              <div>
+                <div class="font-bold text-cadence-charcoal text-[11px]">Healthcare & Clinics</div>
+                <div class="text-[9px] text-cadence-slate">Clinics & Rounds</div>
+              </div>
+            </button>
+            <button type="button" onclick="applyIndustryTemplate('hospitality')" class="p-2.5 rounded-xl border border-cadence-border text-left hover:border-cadence-charcoal bg-white transition flex items-center gap-2 cursor-pointer">
+              <span class="text-base">☕</span>
+              <div>
+                <div class="font-bold text-cadence-charcoal text-[11px]">Hospitality & Dining</div>
+                <div class="text-[9px] text-cadence-slate">Venues & Walks</div>
+              </div>
+            </button>
+            <button type="button" onclick="applyIndustryTemplate('corporate')" class="p-2.5 rounded-xl border border-cadence-border text-left hover:border-cadence-charcoal bg-white transition flex items-center gap-2 cursor-pointer">
+              <span class="text-base">💼</span>
+              <div>
+                <div class="font-bold text-cadence-charcoal text-[11px]">Corporate & Banking</div>
+                <div class="text-[9px] text-cadence-slate">Branches & Reviews</div>
+              </div>
+            </button>
+            <button type="button" onclick="applyIndustryTemplate('custom')" class="p-2.5 rounded-xl border border-cadence-border text-left hover:border-cadence-charcoal bg-white transition flex items-center gap-2 cursor-pointer">
+              <span class="text-base">⚙️</span>
+              <div>
+                <div class="font-bold text-cadence-charcoal text-[11px]">Custom / Agnostic</div>
+                <div class="text-[9px] text-cadence-slate">Locations & Visits</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Core Naming Conventions -->
+        <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-xl space-y-2.5">
+          <label class="block font-bold text-cadence-charcoal uppercase tracking-wider text-[11px]">Core Unit & Visit Labels</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label class="block font-semibold text-cadence-slate mb-1">Singular Unit (e.g. Store)</label>
+              <input id="input-tax-loc-singular" type="text" placeholder="Store" class="w-full px-3 py-1.5 border border-cadence-border rounded-lg bg-white focus:outline-none focus:border-cadence-accent font-medium">
+            </div>
+            <div>
+              <label class="block font-semibold text-cadence-slate mb-1">Plural Units (e.g. Stores)</label>
+              <input id="input-tax-loc-plural" type="text" placeholder="Stores" class="w-full px-3 py-1.5 border border-cadence-border rounded-lg bg-white focus:outline-none focus:border-cadence-accent font-medium">
+            </div>
+            <div>
+              <label class="block font-semibold text-cadence-slate mb-1">Visit / Walk Label (e.g. Visit)</label>
+              <input id="input-tax-visit-label" type="text" placeholder="Visit" class="w-full px-3 py-1.5 border border-cadence-border rounded-lg bg-white focus:outline-none focus:border-cadence-accent font-medium">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Facility / Location Types Tag Cloud -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-cadence-charcoal uppercase tracking-wider text-[11px]">Location / Store Types</label>
+            <span class="text-[10px] text-cadence-slate">Click "×" to remove</span>
+          </div>
+          <div id="tax-tags-loctypes" class="flex flex-wrap gap-1.5 p-2.5 bg-cadence-canvas border border-cadence-border rounded-xl min-h-[42px]">
+            <!-- Rendered tags -->
+          </div>
+          <div class="flex gap-2">
+            <input id="input-add-loctype" type="text" placeholder="Add custom location type (e.g. Flagship Store, Urgent Care, Warehouse)..." class="flex-1 px-3 py-1.5 border border-cadence-border rounded-lg text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); addTaxonomyTag('loctypes');}">
+            <button type="button" onclick="addTaxonomyTag('loctypes')" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add</button>
+          </div>
+        </div>
+
+        <!-- 4. Team Member Roles Tag Cloud -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-cadence-charcoal uppercase tracking-wider text-[11px]">Team Member Roles</label>
+            <span class="text-[10px] text-cadence-slate">Click "×" to remove</span>
+          </div>
+          <div id="tax-tags-roles" class="flex flex-wrap gap-1.5 p-2.5 bg-cadence-canvas border border-cadence-border rounded-xl min-h-[42px]">
+            <!-- Rendered tags -->
+          </div>
+          <div class="flex gap-2">
+            <input id="input-add-role" type="text" placeholder="Add custom role (e.g. Store Manager, Registered Nurse, Barista Lead)..." class="flex-1 px-3 py-1.5 border border-cadence-border rounded-lg text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); addTaxonomyTag('roles');}">
+            <button type="button" onclick="addTaxonomyTag('roles')" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add</button>
+          </div>
+        </div>
+
+        <!-- 5. Task Categories / Tags Cloud -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-cadence-charcoal uppercase tracking-wider text-[11px]">Task Categories & Tags</label>
+            <span class="text-[10px] text-cadence-slate">Click "×" to remove</span>
+          </div>
+          <div id="tax-tags-taskcategories" class="flex flex-wrap gap-1.5 p-2.5 bg-cadence-canvas border border-cadence-border rounded-xl min-h-[42px]">
+            <!-- Rendered tags -->
+          </div>
+          <div class="flex gap-2">
+            <input id="input-add-taskcategory" type="text" placeholder="Add custom task category (e.g. Merchandising, Compliance, Inventory)..." class="flex-1 px-3 py-1.5 border border-cadence-border rounded-lg text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); addTaxonomyTag('taskcategories');}">
+            <button type="button" onclick="addTaxonomyTag('taskcategories')" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add</button>
+          </div>
+        </div>
+
+        <!-- 6. Observation & Drill Types Tag Cloud -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-cadence-charcoal uppercase tracking-wider text-[11px]">Observation & Coaching Drill Types</label>
+            <span class="text-[10px] text-cadence-slate">Click "×" to remove</span>
+          </div>
+          <div id="tax-tags-drilltypes" class="flex flex-wrap gap-1.5 p-2.5 bg-cadence-canvas border border-cadence-border rounded-xl min-h-[42px]">
+            <!-- Rendered tags -->
+          </div>
+          <div class="flex gap-2">
+            <input id="input-add-drilltype" type="text" placeholder="Add custom drill type (e.g. Audit, Walkthrough, Skills Check)..." class="flex-1 px-3 py-1.5 border border-cadence-border rounded-lg text-xs focus:outline-none focus:border-cadence-accent bg-white" onkeydown="if(event.key==='Enter'){event.preventDefault(); addTaxonomyTag('drilltypes');}">
+            <button type="button" onclick="addTaxonomyTag('drilltypes')" class="px-3 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-cadence-border">
+        <span class="text-[11px] text-cadence-slate">Saved to your account across all future sessions.</span>
+        <div class="flex gap-2">
+          <button onclick="closeModal('modal-taxonomy-settings')" class="px-3.5 py-2 text-xs font-semibold text-cadence-slate hover:bg-cadence-sandLight rounded-lg transition cursor-pointer">Cancel</button>
+          <button onclick="saveTaxonomyForm()" class="px-4 py-2 bg-cadence-charcoal text-white text-xs font-semibold rounded-lg hover:bg-black transition cursor-pointer flex items-center gap-1.5">
+            <i data-lucide="check" class="w-3.5 h-3.5 text-cadence-green"></i>
+            <span>Save & Apply Terminology</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- APPLICATION CONTROLLER SCRIPT -->
   <script>
+    // ==========================================
+    // INDUSTRY-AGNOSTIC TAXONOMY & CUSTOM NAMING
+    // ==========================================
+    let editingTaxonomy = null;
+
+    function openTaxonomyModal() {
+      const current = getTaxonomy();
+      editingTaxonomy = JSON.parse(JSON.stringify(current));
+
+      document.getElementById('input-tax-loc-singular').value = editingTaxonomy.locationLabel || 'Store';
+      document.getElementById('input-tax-loc-plural').value = editingTaxonomy.locationsLabel || 'Stores';
+      document.getElementById('input-tax-visit-label').value = editingTaxonomy.visitLabel || 'Visit';
+
+      renderTaxonomyModalTags();
+      openModal('modal-taxonomy-settings');
+      if (window.lucide) lucide.createIcons();
+    }
+    window.openTaxonomyModal = openTaxonomyModal;
+
+    function applyIndustryTemplate(templateKey) {
+      const template = INDUSTRY_TEMPLATES[templateKey];
+      if (!template) return;
+
+      editingTaxonomy = JSON.parse(JSON.stringify(template));
+      document.getElementById('input-tax-loc-singular').value = template.locationLabel;
+      document.getElementById('input-tax-loc-plural').value = template.locationsLabel;
+      document.getElementById('input-tax-visit-label').value = template.visitLabel;
+
+      renderTaxonomyModalTags();
+      showWorkspaceToast('Template Loaded', `Applied "${template.name}" terminology preset. Review or customize further, then click Save.`);
+    }
+    window.applyIndustryTemplate = applyIndustryTemplate;
+
+    function renderTaxonomyModalTags() {
+      if (!editingTaxonomy) return;
+
+      // 1. Location Types
+      const loctypesEl = document.getElementById('tax-tags-loctypes');
+      if (loctypesEl) {
+        loctypesEl.innerHTML = (editingTaxonomy.locationTypes || []).map((t, idx) => `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-cadence-border text-xs font-semibold text-cadence-charcoal shadow-2xs">
+            <span>${t}</span>
+            <button type="button" onclick="removeTaxonomyTag('loctypes', ${idx})" class="text-cadence-slate hover:text-red-600 transition p-0.5 cursor-pointer"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        `).join('');
+      }
+
+      // 2. Roles
+      const rolesEl = document.getElementById('tax-tags-roles');
+      if (rolesEl) {
+        rolesEl.innerHTML = (editingTaxonomy.memberRoles || []).map((r, idx) => `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-cadence-border text-xs font-semibold text-cadence-charcoal shadow-2xs">
+            <span>${r}</span>
+            <button type="button" onclick="removeTaxonomyTag('roles', ${idx})" class="text-cadence-slate hover:text-red-600 transition p-0.5 cursor-pointer"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        `).join('');
+      }
+
+      // 3. Task Categories
+      const catsEl = document.getElementById('tax-tags-taskcategories');
+      if (catsEl) {
+        catsEl.innerHTML = (editingTaxonomy.taskCategories || []).map((c, idx) => `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-cadence-border text-xs font-semibold text-cadence-charcoal shadow-2xs">
+            <span>${c}</span>
+            <button type="button" onclick="removeTaxonomyTag('taskcategories', ${idx})" class="text-cadence-slate hover:text-red-600 transition p-0.5 cursor-pointer"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        `).join('');
+      }
+
+      // 4. Drill / Visit Types
+      const drillsEl = document.getElementById('tax-tags-drilltypes');
+      if (drillsEl) {
+        drillsEl.innerHTML = (editingTaxonomy.drillTypes || []).map((d, idx) => `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-cadence-border text-xs font-semibold text-cadence-charcoal shadow-2xs">
+            <span>${d}</span>
+            <button type="button" onclick="removeTaxonomyTag('drilltypes', ${idx})" class="text-cadence-slate hover:text-red-600 transition p-0.5 cursor-pointer"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </span>
+        `).join('');
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+    window.renderTaxonomyModalTags = renderTaxonomyModalTags;
+
+    function addTaxonomyTag(tagType) {
+      if (!editingTaxonomy) editingTaxonomy = JSON.parse(JSON.stringify(getTaxonomy()));
+      let inputId, targetArray;
+
+      if (tagType === 'loctypes') {
+        inputId = 'input-add-loctype';
+        targetArray = editingTaxonomy.locationTypes = editingTaxonomy.locationTypes || [];
+      } else if (tagType === 'roles') {
+        inputId = 'input-add-role';
+        targetArray = editingTaxonomy.memberRoles = editingTaxonomy.memberRoles || [];
+      } else if (tagType === 'taskcategories') {
+        inputId = 'input-add-taskcategory';
+        targetArray = editingTaxonomy.taskCategories = editingTaxonomy.taskCategories || [];
+      } else if (tagType === 'drilltypes') {
+        inputId = 'input-add-drilltype';
+        targetArray = editingTaxonomy.drillTypes = editingTaxonomy.drillTypes || [];
+      }
+
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const val = input.value.trim();
+      if (!val) return;
+
+      if (!targetArray.includes(val)) {
+        targetArray.push(val);
+        input.value = '';
+        renderTaxonomyModalTags();
+      } else {
+        input.value = '';
+      }
+    }
+    window.addTaxonomyTag = addTaxonomyTag;
+
+    function removeTaxonomyTag(tagType, index) {
+      if (!editingTaxonomy) return;
+      let targetArray;
+      if (tagType === 'loctypes') targetArray = editingTaxonomy.locationTypes;
+      else if (tagType === 'roles') targetArray = editingTaxonomy.memberRoles;
+      else if (tagType === 'taskcategories') targetArray = editingTaxonomy.taskCategories;
+      else if (tagType === 'drilltypes') targetArray = editingTaxonomy.drillTypes;
+
+      if (targetArray && targetArray.length > 1) {
+        targetArray.splice(index, 1);
+        renderTaxonomyModalTags();
+      } else {
+        showWorkspaceToast('Required Option', 'Keep at least one option in each category so dropdowns have selections.');
+      }
+    }
+    window.removeTaxonomyTag = removeTaxonomyTag;
+
+    function saveTaxonomyForm() {
+      if (!editingTaxonomy) editingTaxonomy = JSON.parse(JSON.stringify(getTaxonomy()));
+
+      const locSingular = document.getElementById('input-tax-loc-singular').value.trim() || 'Store';
+      const locPlural = document.getElementById('input-tax-loc-plural').value.trim() || 'Stores';
+      const visitLabel = document.getElementById('input-tax-visit-label').value.trim() || 'Visit';
+
+      editingTaxonomy.locationLabel = locSingular;
+      editingTaxonomy.locationsLabel = locPlural;
+      editingTaxonomy.visitLabel = visitLabel;
+      editingTaxonomy.walkLabel = `${locSingular} ${visitLabel}`;
+
+      window.cadenceState.taxonomy = JSON.parse(JSON.stringify(editingTaxonomy));
+
+      // Persist across sessions (Firestore & LocalStorage)
+      window.saveState();
+
+      // Apply UI labels across all tabs and modals
+      applyTaxonomyLabels();
+
+      // Re-render all views
+      renderAll();
+
+      closeModal('modal-taxonomy-settings');
+      showWorkspaceToast('Naming Conventions Saved', `Custom terminology applied: ${locSingular} / ${locPlural} and custom categories are active and saved to your account.`);
+    }
+    window.saveTaxonomyForm = saveTaxonomyForm;
+
+    function applyTaxonomyLabels() {
+      const tax = getTaxonomy();
+      const locSingular = tax.locationLabel || 'Store';
+      const locPlural = tax.locationsLabel || 'Stores';
+      const visitLabel = tax.visitLabel || 'Visit';
+
+      // 1. Overview Tab
+      const overviewTitle = document.getElementById('header-overview-title');
+      if (overviewTitle) overviewTitle.textContent = `${locPlural} & Team Overview`;
+
+      const overviewSub = document.getElementById('header-overview-sub');
+      if (overviewSub) overviewSub.textContent = `See how your ${locSingular.toLowerCase()} ${visitLabel.toLowerCase()}s are pacing, what's on your plate, and how the team is doing.`;
+
+      const btnNavStores = document.getElementById('btn-overview-nav-stores');
+      if (btnNavStores) btnNavStores.textContent = `${locPlural} & ${visitLabel}s`;
+
+      const statCadenceTitle = document.getElementById('stat-cadence-title');
+      if (statCadenceTitle) statCadenceTitle.textContent = `${visitLabel} Pace`;
+
+      const statLocTitle = document.getElementById('stat-locations-title');
+      if (statLocTitle) statLocTitle.textContent = `Active ${locPlural}`;
+
+      const statLocSub = document.getElementById('stat-locations-sub');
+      if (statLocSub) {
+        const typesStr = (tax.locationTypes || []).slice(0, 3).join(', ');
+        statLocSub.textContent = typesStr || `${locPlural} in your network`;
+      }
+
+      const storesSectionTitle = document.getElementById('overview-stores-title');
+      if (storesSectionTitle) storesSectionTitle.textContent = `${locPlural} & Team Members`;
+
+      const storesSectionSub = document.getElementById('overview-stores-sub');
+      if (storesSectionSub) storesSectionSub.textContent = `Click any ${locSingular.toLowerCase()} to see the team and plan your next ${visitLabel.toLowerCase()}.`;
+
+      const btnAddStoreOverview = document.getElementById('btn-overview-add-store');
+      if (btnAddStoreOverview) btnAddStoreOverview.textContent = `+ Add ${locSingular}`;
+
+      const vlogHistoryTitle = document.getElementById('visit-logs-title');
+      if (vlogHistoryTitle) vlogHistoryTitle.textContent = `${locSingular} ${visitLabel} Log History`;
+
+      const vlogHistorySub = document.getElementById('visit-logs-sub');
+      if (vlogHistorySub) vlogHistorySub.textContent = `Every ${locSingular.toLowerCase()} ${visitLabel.toLowerCase()} and coaching session logged in Cadence. Ready for Google Sheets export.`;
+
+      const btnLogVisitOverview = document.getElementById('btn-overview-log-visit');
+      if (btnLogVisitOverview) btnLogVisitOverview.innerHTML = `<i data-lucide="plus" class="w-3.5 h-3.5"></i> Log ${visitLabel}`;
+
+      const thVlogStore = document.getElementById('th-vlog-store');
+      if (thVlogStore) thVlogStore.textContent = `${locSingular} Location`;
+
+      const thVlogType = document.getElementById('th-vlog-type');
+      if (thVlogType) thVlogType.textContent = `${visitLabel} Type`;
+
+      // 2. Tasks / Pipeline Tab
+      const pipelineSub = document.getElementById('pipeline-sub');
+      if (pipelineSub) pipelineSub.textContent = `Keep track of follow-ups, ${locSingular.toLowerCase()} commitments, and action items.`;
+
+      const pipelineFilter = document.getElementById('pipeline-filter-tag');
+      if (pipelineFilter) {
+        const currentVal = pipelineFilter.value || 'all';
+        const categories = tax.taskCategories || [];
+        pipelineFilter.innerHTML = `<option value="all">All Categories</option>` + categories.map(c => `<option value="${c}" ${c === currentVal ? 'selected' : ''}>${c}</option>`).join('');
+      }
+
+      // 3. Team & Coaching Tab
+      const coachingSub = document.getElementById('coaching-sub');
+      if (coachingSub) coachingSub.textContent = `${locSingular} rosters, one-on-one coaching notes, and ${visitLabel.toLowerCase()} drills.`;
+
+      const btnAddStoreCoaching = document.getElementById('btn-coaching-add-store');
+      if (btnAddStoreCoaching) btnAddStoreCoaching.textContent = `+ Add ${locSingular}`;
+
+      // 4. Modals
+      const modalLocTitle = document.getElementById('modal-location-title');
+      if (modalLocTitle && !document.getElementById('input-loc-edit-id')?.value) {
+        modalLocTitle.textContent = `Add ${locSingular}`;
+      }
+      const labelLocName = document.getElementById('label-loc-name');
+      if (labelLocName) labelLocName.textContent = `${locSingular} Name`;
+
+      const modalLocTypeLabel = document.getElementById('modal-loc-type-label');
+      if (modalLocTypeLabel) modalLocTypeLabel.textContent = `${locSingular} Type`;
+
+      const labelLocAddress = document.getElementById('label-loc-address');
+      if (labelLocAddress) labelLocAddress.textContent = `${locSingular} Physical Address`;
+
+      const labelLocCadence = document.getElementById('label-loc-cadence');
+      if (labelLocCadence) labelLocCadence.textContent = `${visitLabel} Rhythm (Cadence)`;
+
+      const labelLocDate = document.getElementById('label-loc-date');
+      if (labelLocDate) labelLocDate.textContent = `Last ${visitLabel} Date`;
+
+      const btnSaveLoc = document.getElementById('btn-save-location');
+      if (btnSaveLoc) btnSaveLoc.textContent = `Save ${locSingular}`;
+
+      const modalLogTitle = document.getElementById('modal-log-visit-title');
+      if (modalLogTitle) modalLogTitle.textContent = `Log ${locSingular} ${visitLabel}`;
+
+      const labelVlogStore = document.getElementById('label-vlog-store');
+      if (labelVlogStore) labelVlogStore.textContent = `${locSingular} Location`;
+
+      const labelVlogDate = document.getElementById('label-vlog-date');
+      if (labelVlogDate) labelVlogDate.textContent = `${visitLabel} Date`;
+
+      const modalLogTypeLabel = document.getElementById('modal-log-visit-type-label');
+      if (modalLogTypeLabel) modalLogTypeLabel.textContent = `${visitLabel} Type`;
+
+      const btnSaveVlog = document.getElementById('btn-save-vlog');
+      if (btnSaveVlog) btnSaveVlog.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-cadence-green"></i> Save ${visitLabel} Log`;
+
+      const modalCalTitle = document.getElementById('modal-cal-title');
+      if (modalCalTitle) modalCalTitle.textContent = `Schedule ${locSingular} ${visitLabel}`;
+
+      const labelCalStore = document.getElementById('label-cal-store');
+      if (labelCalStore) labelCalStore.textContent = `${locSingular} Location`;
+
+      const labelCalTitle = document.getElementById('label-cal-title');
+      if (labelCalTitle) labelCalTitle.textContent = `${visitLabel} Focus / Title`;
+
+      const labelCalNotes = document.getElementById('label-cal-notes');
+      if (labelCalNotes) labelCalNotes.textContent = `Notes / Plan for this ${visitLabel}`;
+
+      const modalDebriefTitle = document.getElementById('modal-debrief-title');
+      if (modalDebriefTitle) modalDebriefTitle.textContent = `${locSingular} ${visitLabel} Summary`;
+
+      const labelCpScope = document.getElementById('label-cp-scope');
+      if (labelCpScope) labelCpScope.textContent = `Target ${locSingular} Scope`;
+
+      // Update dropdown options
+      populateLocTypeSelect();
+      populateMemberRoleSelect();
+      populateTaskTagSelect();
+      populateVlogTypeSelect();
+
+      // Content creation audience options populated with custom roles
+      const cpAudience = document.getElementById('input-cp-audience');
+      if (cpAudience) {
+        const cur = cpAudience.value || (tax.memberRoles && tax.memberRoles[0]);
+        const roles = tax.memberRoles || [];
+        cpAudience.innerHTML = roles.map(r => `<option value="${r}" ${r === cur ? 'selected' : ''}>${r}</option>`).join('') + `<option value="All Staff">All ${locPlural} Staff</option>`;
+      }
+      const cpFilterAudience = document.getElementById('filter-content-audience');
+      if (cpFilterAudience) {
+        const cur = cpFilterAudience.value || 'all';
+        const roles = tax.memberRoles || [];
+        cpFilterAudience.innerHTML = `<option value="all">All Audiences</option>` + roles.map(r => `<option value="${r}" ${r === cur ? 'selected' : ''}>${r}</option>`).join('') + `<option value="All Staff" ${cur === 'All Staff' ? 'selected' : ''}>All Staff</option>`;
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+    window.applyTaxonomyLabels = applyTaxonomyLabels;
+
     // Friendly, practical dealership drills
     const DEALERSHIP_DRILL_PRESETS = [
       { text: "Greeting & Discovery: Ask 3 friendly lifestyle questions right away", type: "Shadow & Observe" },
@@ -1488,6 +2261,7 @@
     ];
 
     function renderAll() {
+      applyTaxonomyLabels();
       renderOverview();
       renderPipeline();
       renderRoster();
@@ -1506,11 +2280,15 @@
         if (el) el.classList.add('hidden');
         const btn = document.getElementById(`nav-btn-${v}`);
         if (btn) btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition-colors cursor-pointer';
+        const mobBtn = document.getElementById(`mobile-nav-btn-${v}`);
+        if (mobBtn) mobBtn.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-cadence-slate hover:text-cadence-charcoal hover:bg-cadence-sandLight transition cursor-pointer';
       });
       const activeEl = document.getElementById(`view-${viewName}`);
       if (activeEl) activeEl.classList.remove('hidden');
       const activeBtn = document.getElementById(`nav-btn-${viewName}`);
       if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition-colors cursor-pointer';
+      const activeMobBtn = document.getElementById(`mobile-nav-btn-${viewName}`);
+      if (activeMobBtn) activeMobBtn.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cadence-sand text-cadence-charcoal transition cursor-pointer';
       
       if (viewName === 'content') {
         renderContentProjects();
@@ -1524,6 +2302,35 @@
       }
     }
     window.switchView = switchView;
+
+    function toggleMobileMenu(forceState) {
+      const menu = document.getElementById('mobile-nav-menu');
+      const backdrop = document.getElementById('mobile-nav-backdrop');
+      const icon = document.getElementById('mobile-menu-icon');
+      if (!menu) return;
+
+      const isCurrentlyOpen = !menu.classList.contains('hidden');
+      const nextOpen = typeof forceState === 'boolean' ? forceState : !isCurrentlyOpen;
+
+      if (nextOpen) {
+        menu.classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
+        if (icon) icon.setAttribute('data-lucide', 'x');
+      } else {
+        menu.classList.add('hidden');
+        if (backdrop) backdrop.classList.add('hidden');
+        if (icon) icon.setAttribute('data-lucide', 'menu');
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+    window.toggleMobileMenu = toggleMobileMenu;
+
+    function mobileNavSwitch(viewName) {
+      switchView(viewName);
+      toggleMobileMenu(false);
+    }
+    window.mobileNavSwitch = mobileNavSwitch;
 
     // Helper: Days difference from today
     function getDaysAgo(dateStr) {
@@ -1552,6 +2359,10 @@
       if (!container || !state) return;
 
       const locs = state.locations || [];
+      const tax = getTaxonomy();
+      const locSingular = tax.locationLabel || 'Store';
+      const locPlural = tax.locationsLabel || 'Stores';
+      const visitLabel = tax.visitLabel || 'Visit';
       let onTrackCount = 0;
 
       container.innerHTML = locs.map(loc => {
@@ -1575,24 +2386,24 @@
 
               <div class="mt-3 flex items-center justify-between text-[11px] text-cadence-slate pt-3 border-t border-cadence-border">
                 <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i> ${staff.length} Team Members</span>
-                <span title="Last walk">Last stopped by: ${daysText}</span>
+                <span title="Last ${visitLabel.toLowerCase()}">Last ${visitLabel.toLowerCase()}: ${daysText}</span>
               </div>
             </div>
 
             <div class="mt-3 pt-2.5 flex items-center justify-between gap-2 border-t border-cadence-border/60">
               <div class="flex items-center gap-2">
-                <button onclick="openLogVisitModal('${loc.id}')" class="text-[10px] font-semibold text-cadence-charcoal hover:text-cadence-green flex items-center gap-1 cursor-pointer" title="Log a store walk and record observations">
-                  <i data-lucide="clipboard-check" class="w-3 h-3 text-cadence-green"></i> Log Walk
+                <button onclick="openLogVisitModal('${loc.id}')" class="text-[10px] font-semibold text-cadence-charcoal hover:text-cadence-green flex items-center gap-1 cursor-pointer" title="Log a ${locSingular.toLowerCase()} ${visitLabel.toLowerCase()} and record observations">
+                  <i data-lucide="clipboard-check" class="w-3 h-3 text-cadence-green"></i> Log ${visitLabel}
                 </button>
-                <button onclick="openScheduleVisitModal('${loc.id}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer" title="Schedule walk in Google Calendar">
+                <button onclick="openScheduleVisitModal('${loc.id}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer" title="Schedule ${visitLabel.toLowerCase()} in Google Calendar">
                   <i data-lucide="calendar-plus" class="w-3 h-3"></i> Schedule
                 </button>
               </div>
               <div class="flex items-center gap-2">
-                <button onclick="openEditLocationModal('${loc.id}')" title="Edit Store Details" class="text-[10px] text-cadence-slate hover:text-cadence-charcoal cursor-pointer p-0.5">
+                <button onclick="openEditLocationModal('${loc.id}')" title="Edit ${locSingular} Details" class="text-[10px] text-cadence-slate hover:text-cadence-charcoal cursor-pointer p-0.5">
                   <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                 </button>
-                <button onclick="deleteLocation('${loc.id}')" title="Delete Store" class="text-[10px] text-cadence-slate hover:text-red-600 cursor-pointer p-0.5">
+                <button onclick="deleteLocation('${loc.id}')" title="Delete ${locSingular}" class="text-[10px] text-cadence-slate hover:text-red-600 cursor-pointer p-0.5">
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
                 <button onclick="switchView('coaching'); selectEmployee('${staff[0]?.id || ''}')" class="text-[10px] text-cadence-accent font-semibold hover:underline cursor-pointer">Team →</button>
@@ -1604,7 +2415,7 @@
 
       // Top KPIs
       const countEl = document.getElementById('stat-locations-count');
-      if (countEl) countEl.textContent = `${locs.length} Stores`;
+      if (countEl) countEl.textContent = `${locs.length} ${locPlural}`;
 
       const inFlightCount = (state.tasks || []).filter(t => t.stage === 'in-flight').length;
       const tasksEl = document.getElementById('stat-active-tasks');
@@ -1618,10 +2429,181 @@
       }
       const cadenceSub = document.getElementById('stat-cadence-sub');
       if (cadenceSub) {
-        cadenceSub.textContent = `${onTrackCount} of ${locs.length} stores on schedule`;
+        cadenceSub.textContent = `${onTrackCount} of ${locs.length} ${locPlural.toLowerCase()} on schedule`;
       }
+
+      // Training Content KPI Card
+      const contentProjects = state.contentProjects || [];
+      const activeContent = contentProjects.filter(p => normalizeContentStage(p.stage) !== 'complete');
+      const inProdContent = contentProjects.filter(p => {
+        const s = normalizeContentStage(p.stage);
+        return s === 'production' || s === 'review';
+      });
+      const completeContent = contentProjects.filter(p => normalizeContentStage(p.stage) === 'complete');
+
+      const contentEl = document.getElementById('stat-overview-content');
+      if (contentEl) {
+        contentEl.textContent = `${activeContent.length} In Pipeline`;
+      }
+      const contentSub = document.getElementById('stat-overview-content-sub');
+      if (contentSub) {
+        contentSub.textContent = `${inProdContent.length} prod/review • ${completeContent.length} complete`;
+      }
+
+      // Render Training Content Spotlight Widget on Overview
+      renderOverviewContentWidget();
+
       renderVisitLogsTable();
     }
+
+    function renderOverviewContentWidget() {
+      const state = window.cadenceState;
+      if (!state) return;
+      const projects = state.contentProjects || [];
+      const locs = state.locations || [];
+
+      // 1. Count Badge
+      const badge = document.getElementById('overview-content-count-badge');
+      const activeCount = projects.filter(p => normalizeContentStage(p.stage) !== 'complete').length;
+      if (badge) {
+        badge.textContent = `${projects.length} Total • ${activeCount} Active`;
+      }
+
+      // 2. Stages Distribution Pills & Pipeline Bar
+      const pillsContainer = document.getElementById('overview-content-stages-pills');
+      const barContainer = document.getElementById('overview-content-pipeline-bar');
+
+      const stagesConfig = [
+        { id: 'backlog', label: 'Backlog', color: 'text-amber-800', bg: 'bg-amber-50 border-amber-200', barBg: 'bg-amber-400' },
+        { id: 'storyboard', label: 'Storyboard', color: 'text-blue-800', bg: 'bg-blue-50 border-blue-200', barBg: 'bg-blue-500' },
+        { id: 'production', label: 'Production', color: 'text-purple-800', bg: 'bg-purple-50 border-purple-200', barBg: 'bg-purple-500' },
+        { id: 'review', label: 'Review & Editing', color: 'text-orange-800', bg: 'bg-orange-50 border-orange-200', barBg: 'bg-orange-500' },
+        { id: 'complete', label: 'Complete', color: 'text-emerald-800', bg: 'bg-emerald-50 border-emerald-200', barBg: 'bg-emerald-500' }
+      ];
+
+      if (pillsContainer) {
+        pillsContainer.innerHTML = stagesConfig.map(s => {
+          const count = projects.filter(p => normalizeContentStage(p.stage) === s.id).length;
+          return `
+            <div onclick="switchView('content')" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${s.bg} cursor-pointer hover:opacity-90 transition">
+              <span class="text-[11px] font-semibold ${s.color}">${s.label}</span>
+              <span class="text-[10px] font-bold px-1.5 py-0.2 bg-white rounded-full ${s.color} border border-current/20">${count}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (barContainer) {
+        const total = projects.length || 1;
+        barContainer.innerHTML = stagesConfig.map(s => {
+          const count = projects.filter(p => normalizeContentStage(p.stage) === s.id).length;
+          const pct = Math.round((count / total) * 100);
+          if (pct === 0) return '';
+          return `<div class="${s.barBg} h-full transition-all duration-300" style="width: ${pct}%" title="${s.label}: ${count} (${pct}%)"></div>`;
+        }).join('');
+      }
+
+      // 3. Spotlight Project Cards (Top 3 projects: prioritize production, review, and high priority)
+      const cardsContainer = document.getElementById('overview-content-cards-container');
+      if (cardsContainer) {
+        if (projects.length === 0) {
+          cardsContainer.innerHTML = `
+            <div class="col-span-3 p-8 border border-dashed border-cadence-border rounded-xl text-center space-y-2">
+              <p class="text-xs text-cadence-slate italic">No training content projects yet.</p>
+              <button onclick="openContentProjectModal()" class="px-3.5 py-1.5 bg-cadence-charcoal text-white rounded-lg text-xs font-semibold hover:bg-black transition cursor-pointer">+ Create First Training Project</button>
+            </div>
+          `;
+          return;
+        }
+
+        // Sort projects: Production & Review first, then Storyboard & Backlog, Complete last
+        const stageWeight = { review: 4, production: 3, storyboard: 2, backlog: 1, complete: 0 };
+        const sorted = [...projects].sort((a, b) => {
+          const stA = normalizeContentStage(a.stage);
+          const stB = normalizeContentStage(b.stage);
+          const wA = (stageWeight[stA] || 0) + (a.priority === 'High' ? 1.5 : 0);
+          const wB = (stageWeight[stB] || 0) + (b.priority === 'High' ? 1.5 : 0);
+          return wB - wA;
+        }).slice(0, 3);
+
+        cardsContainer.innerHTML = sorted.map(p => {
+          const mCount = (p.milestones || []).length;
+          const mDone = (p.milestones || []).filter(m => m.done).length;
+          const mPct = mCount > 0 ? Math.round((mDone / mCount) * 100) : 0;
+          const normSt = normalizeContentStage(p.stage);
+          const stageObj = stagesConfig.find(s => s.id === normSt) || stagesConfig[0];
+          
+          let formatIcon = 'clapperboard';
+          if (p.format === 'Full Module') formatIcon = 'film';
+          else if (p.format === 'Quick Reference Guide') formatIcon = 'file-text';
+          else if (p.format === 'Roleplay Scenario') formatIcon = 'users';
+          else if (p.format === 'Audio Briefing') formatIcon = 'headphones';
+
+          const storeObj = locs.find(l => l.id === p.targetStore);
+          const storeLabel = p.targetStore === 'all' ? 'All Stores' : (storeObj ? storeObj.name : 'Store');
+
+          const prioBadge = p.priority === 'High'
+            ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">High</span>'
+            : p.priority === 'Medium'
+            ? '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">Medium</span>'
+            : '<span class="text-[9px] font-medium px-1.5 py-0.5 rounded bg-white text-cadence-slate border border-cadence-border">Low</span>';
+
+          return `
+            <div class="p-3.5 bg-cadence-canvas border border-cadence-border rounded-xl hover:border-cadence-charcoal transition flex flex-col justify-between space-y-3">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-1.5">
+                  <span class="inline-flex items-center gap-1 text-[10px] font-medium text-cadence-slate">
+                    <i data-lucide="${formatIcon}" class="w-3 h-3 text-cadence-accent"></i>
+                    <span>${p.format}</span>
+                  </span>
+                  <div class="flex items-center gap-1.5">
+                    ${prioBadge}
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded border ${stageObj.bg} ${stageObj.color} uppercase">${stageObj.label}</span>
+                  </div>
+                </div>
+
+                <div class="cursor-pointer" onclick="openContentProjectModal('${p.id}')">
+                  <h4 class="text-xs font-bold text-cadence-charcoal hover:text-cadence-accent transition leading-snug line-clamp-2">${p.title}</h4>
+                  ${p.summary ? `<p class="text-[10px] text-cadence-slate mt-1 line-clamp-2 leading-relaxed">${p.summary}</p>` : ''}
+                </div>
+
+                <div class="flex flex-wrap gap-1 text-[9px] pt-1">
+                  <span class="px-1.5 py-0.5 rounded bg-white border border-cadence-border text-cadence-charcoal font-semibold">${p.audience}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-cadence-sandLight border border-cadence-border text-cadence-slate">${storeLabel}</span>
+                </div>
+              </div>
+
+              <div class="space-y-2 pt-2 border-t border-cadence-border/60">
+                ${mCount > 0 ? `
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[10px] text-cadence-slate">
+                      <span>Milestones: ${mDone}/${mCount}</span>
+                      <span class="font-semibold text-cadence-charcoal">${mPct}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-cadence-sandLight rounded-full overflow-hidden">
+                      <div class="h-full bg-cadence-accent rounded-full transition-all duration-300" style="width: ${mPct}%"></div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                <div class="flex items-center justify-between text-[10px] text-cadence-slate pt-1">
+                  <span class="flex items-center gap-1" title="Target launch">
+                    <i data-lucide="calendar" class="w-3 h-3 text-cadence-slate"></i>
+                    <span>${p.targetDate || 'No date'}</span>
+                  </span>
+                  <button onclick="openContentProjectModal('${p.id}')" class="font-semibold text-cadence-accent hover:underline cursor-pointer flex items-center gap-0.5">
+                    <span>Manage</span> <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+    window.renderOverviewContentWidget = renderOverviewContentWidget;
 
     function quickLogVisit(locId) {
       openLogVisitModal(locId);
@@ -1795,6 +2777,9 @@
         return;
       }
 
+      const tax = getTaxonomy();
+      const locSingular = tax.locationLabel || 'Store';
+      const visitLabel = tax.visitLabel || 'Visit';
       const loc = (state.locations || []).find(l => l.id === emp.locId);
       const plans = (state.visitPlans && state.visitPlans[emp.id]) || [];
       const history = (state.coachingHistory || []).filter(h => h.empId === emp.id);
@@ -1810,7 +2795,7 @@
                   <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
                 </button>
               </div>
-              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name || 'Dealership'} (${loc?.type || 'Dealership'})</p>
+              <p class="text-xs text-cadence-slate mt-0.5">${emp.role} • ${loc?.name || locSingular} (${loc?.type || locSingular})</p>
             </div>
             <div class="flex items-center gap-2">
               <button onclick="exportEmployeeCoachingPlan('${emp.id}')" class="px-2.5 py-1 bg-cadence-sandLight border border-cadence-border text-cadence-charcoal rounded-lg text-xs font-semibold hover:bg-cadence-sand transition flex items-center gap-1.5 cursor-pointer" title="Export this coaching plan to Google Docs in your Google Drive">
@@ -1835,8 +2820,8 @@
           <div class="border border-cadence-border rounded-xl p-4 bg-cadence-sandLight/50">
             <div class="flex items-center justify-between mb-3">
               <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Next Visit Plan</span>
-                <p class="text-[11px] text-cadence-slate">Quick drills and things to shadow on your next walk.</p>
+                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Next ${visitLabel} Plan</span>
+                <p class="text-[11px] text-cadence-slate">Quick drills and things to shadow on your next ${visitLabel.toLowerCase()}.</p>
               </div>
               <div class="flex items-center gap-2">
                 <button onclick="suggestVisitDrills('${emp.name}', '${emp.goal.replace(/'/g, "\\'")}')" class="text-[10px] font-semibold text-cadence-accent hover:underline flex items-center gap-1 cursor-pointer">
@@ -1884,7 +2869,7 @@
           <div class="border border-cadence-border rounded-xl p-4 bg-white">
             <div class="flex items-center justify-between mb-3">
               <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Past Visits & Coaching Notes</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-cadence-charcoal">Past ${visitLabel}s & Coaching Notes</span>
                 <p class="text-[11px] text-cadence-slate">Notes and takeaways from previous check-ins.</p>
               </div>
               <span class="text-[10px] font-semibold text-cadence-slate bg-cadence-sand px-2 py-0.5 rounded">${history.length} completed</span>
@@ -2039,6 +3024,8 @@
       const modal = document.getElementById(id);
       if (modal) modal.classList.remove('hidden');
 
+      const tax = getTaxonomy();
+
       // Populate location selects in member & task modals
       const locs = window.cadenceState.locations || [];
       const memberLocSelect = document.getElementById('input-member-loc');
@@ -2047,31 +3034,193 @@
       }
       const taskLocSelect = document.getElementById('input-task-loc');
       if (taskLocSelect) {
-        taskLocSelect.innerHTML = `<option value="">General (No specific store)</option>` + locs.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+        taskLocSelect.innerHTML = `<option value="">General (No specific ${tax.locationLabel.toLowerCase()})</option>` + locs.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
       }
 
-      if (id === 'modal-add-location' && !document.getElementById('input-loc-edit-id').value) {
-        document.getElementById('input-loc-name').value = '';
-        document.getElementById('input-loc-address').value = '';
-        document.getElementById('input-loc-cadence').value = '14';
-        document.getElementById('input-loc-cadence-custom').value = '';
-        document.getElementById('wrapper-custom-cadence').classList.add('hidden');
-        document.getElementById('input-loc-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('modal-location-title').textContent = 'Add Store';
-        const delBtn = document.getElementById('btn-delete-location');
-        if (delBtn) delBtn.classList.add('hidden');
+      if (id === 'modal-add-location') {
+        const modalLocLabel = document.getElementById('modal-loc-type-label');
+        if (modalLocLabel) modalLocLabel.textContent = `${tax.locationLabel} Type`;
+        document.getElementById('wrapper-custom-loctype-inline')?.classList.add('hidden');
+
+        if (!document.getElementById('input-loc-edit-id').value) {
+          document.getElementById('input-loc-name').value = '';
+          document.getElementById('input-loc-address').value = '';
+          document.getElementById('input-loc-cadence').value = '14';
+          document.getElementById('input-loc-cadence-custom').value = '';
+          document.getElementById('wrapper-custom-cadence').classList.add('hidden');
+          document.getElementById('input-loc-date').value = new Date().toISOString().split('T')[0];
+          document.getElementById('modal-location-title').textContent = `Add ${tax.locationLabel}`;
+          populateLocTypeSelect();
+          const delBtn = document.getElementById('btn-delete-location');
+          if (delBtn) delBtn.classList.add('hidden');
+        }
       }
-      if (id === 'modal-add-member' && !document.getElementById('input-member-edit-id').value) {
-        document.getElementById('input-member-name').value = '';
-        document.getElementById('input-member-goal').value = '';
-        document.getElementById('modal-member-title').textContent = 'Add Team Member';
+      if (id === 'modal-add-member') {
+        document.getElementById('wrapper-custom-memberrole-inline')?.classList.add('hidden');
+        if (!document.getElementById('input-member-edit-id').value) {
+          document.getElementById('input-member-name').value = '';
+          document.getElementById('input-member-goal').value = '';
+          document.getElementById('modal-member-title').textContent = 'Add Team Member';
+          populateMemberRoleSelect();
+        }
       }
       if (id === 'modal-add-task') {
         document.getElementById('input-task-text').value = '';
         document.getElementById('input-task-due').value = '';
+        document.getElementById('wrapper-custom-tasktag-inline')?.classList.add('hidden');
+        populateTaskTagSelect();
       }
     }
     window.openModal = openModal;
+
+    function populateLocTypeSelect(selectedVal) {
+      const tax = getTaxonomy();
+      const select = document.getElementById('input-loc-type');
+      if (!select) return;
+      const types = tax.locationTypes || [];
+      const current = selectedVal || types[0] || '';
+      select.innerHTML = types.map(t => `<option value="${t}" ${t === current ? 'selected' : ''}>${t}</option>`).join('') + `<option value="__custom__">+ Add Custom Type...</option>`;
+    }
+    window.populateLocTypeSelect = populateLocTypeSelect;
+
+    function populateMemberRoleSelect(selectedVal) {
+      const tax = getTaxonomy();
+      const select = document.getElementById('input-member-role');
+      if (!select) return;
+      const roles = tax.memberRoles || [];
+      const current = selectedVal || roles[0] || '';
+      select.innerHTML = roles.map(r => `<option value="${r}" ${r === current ? 'selected' : ''}>${r}</option>`).join('') + `<option value="__custom__">+ Add Custom Role...</option>`;
+    }
+    window.populateMemberRoleSelect = populateMemberRoleSelect;
+
+    function populateTaskTagSelect(selectedVal) {
+      const tax = getTaxonomy();
+      const select = document.getElementById('input-task-tag');
+      if (!select) return;
+      const categories = tax.taskCategories || [];
+      const current = selectedVal || categories[0] || '';
+      select.innerHTML = categories.map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('') + `<option value="__custom__">+ Add Custom Category...</option>`;
+    }
+    window.populateTaskTagSelect = populateTaskTagSelect;
+
+    function populateVlogTypeSelect(selectedVal) {
+      const tax = getTaxonomy();
+      const select = document.getElementById('input-vlog-type');
+      if (!select) return;
+      const drills = tax.drillTypes || [];
+      const current = selectedVal || drills[0] || '';
+      select.innerHTML = drills.map(d => `<option value="${d}" ${d === current ? 'selected' : ''}>${d}</option>`).join('') + `<option value="__custom__">+ Add Custom Type...</option>`;
+    }
+    window.populateVlogTypeSelect = populateVlogTypeSelect;
+
+    function handleLocTypeSelectChange() {
+      const select = document.getElementById('input-loc-type');
+      const wrapper = document.getElementById('wrapper-custom-loctype-inline');
+      if (select && select.value === '__custom__') {
+        if (wrapper) wrapper.classList.remove('hidden');
+        document.getElementById('input-loc-type-inline')?.focus();
+      } else {
+        if (wrapper) wrapper.classList.add('hidden');
+      }
+    }
+    window.handleLocTypeSelectChange = handleLocTypeSelectChange;
+
+    function saveInlineLocType() {
+      const input = document.getElementById('input-loc-type-inline');
+      const val = input ? input.value.trim() : '';
+      if (!val) return;
+      const tax = getTaxonomy();
+      if (!tax.locationTypes.includes(val)) {
+        tax.locationTypes.push(val);
+        window.saveState();
+      }
+      populateLocTypeSelect(val);
+      document.getElementById('wrapper-custom-loctype-inline')?.classList.add('hidden');
+      if (input) input.value = '';
+    }
+    window.saveInlineLocType = saveInlineLocType;
+
+    function handleMemberRoleSelectChange() {
+      const select = document.getElementById('input-member-role');
+      const wrapper = document.getElementById('wrapper-custom-memberrole-inline');
+      if (select && select.value === '__custom__') {
+        if (wrapper) wrapper.classList.remove('hidden');
+        document.getElementById('input-member-role-inline')?.focus();
+      } else {
+        if (wrapper) wrapper.classList.add('hidden');
+      }
+    }
+    window.handleMemberRoleSelectChange = handleMemberRoleSelectChange;
+
+    function saveInlineMemberRole() {
+      const input = document.getElementById('input-member-role-inline');
+      const val = input ? input.value.trim() : '';
+      if (!val) return;
+      const tax = getTaxonomy();
+      if (!tax.memberRoles.includes(val)) {
+        tax.memberRoles.push(val);
+        window.saveState();
+      }
+      populateMemberRoleSelect(val);
+      document.getElementById('wrapper-custom-memberrole-inline')?.classList.add('hidden');
+      if (input) input.value = '';
+    }
+    window.saveInlineMemberRole = saveInlineMemberRole;
+
+    function handleTaskTagSelectChange() {
+      const select = document.getElementById('input-task-tag');
+      const wrapper = document.getElementById('wrapper-custom-tasktag-inline');
+      if (select && select.value === '__custom__') {
+        if (wrapper) wrapper.classList.remove('hidden');
+        document.getElementById('input-task-tag-inline')?.focus();
+      } else {
+        if (wrapper) wrapper.classList.add('hidden');
+      }
+    }
+    window.handleTaskTagSelectChange = handleTaskTagSelectChange;
+
+    function saveInlineTaskTag() {
+      const input = document.getElementById('input-task-tag-inline');
+      const val = input ? input.value.trim() : '';
+      if (!val) return;
+      const tax = getTaxonomy();
+      if (!tax.taskCategories.includes(val)) {
+        tax.taskCategories.push(val);
+        window.saveState();
+      }
+      populateTaskTagSelect(val);
+      document.getElementById('wrapper-custom-tasktag-inline')?.classList.add('hidden');
+      if (input) input.value = '';
+      renderPipeline();
+    }
+    window.saveInlineTaskTag = saveInlineTaskTag;
+
+    function handleVlogTypeSelectChange() {
+      const select = document.getElementById('input-vlog-type');
+      const wrapper = document.getElementById('wrapper-custom-vlogtype-inline');
+      if (select && select.value === '__custom__') {
+        if (wrapper) wrapper.classList.remove('hidden');
+        document.getElementById('input-vlog-type-inline')?.focus();
+      } else {
+        if (wrapper) wrapper.classList.add('hidden');
+      }
+    }
+    window.handleVlogTypeSelectChange = handleVlogTypeSelectChange;
+
+    function saveInlineVlogType() {
+      const input = document.getElementById('input-vlog-type-inline');
+      const val = input ? input.value.trim() : '';
+      if (!val) return;
+      const tax = getTaxonomy();
+      if (!tax.drillTypes.includes(val)) {
+        tax.drillTypes.push(val);
+        window.saveState();
+      }
+      populateVlogTypeSelect(val);
+      document.getElementById('wrapper-custom-vlogtype-inline')?.classList.add('hidden');
+      if (input) input.value = '';
+    }
+    window.saveInlineVlogType = saveInlineVlogType;
 
     function closeModal(id) {
       const modal = document.getElementById(id);
@@ -2103,9 +3252,14 @@
     function openEditLocationModal(locId) {
       const loc = (window.cadenceState.locations || []).find(l => l.id === locId);
       if (!loc) return;
+      const tax = getTaxonomy();
       document.getElementById('input-loc-edit-id').value = loc.id;
       document.getElementById('input-loc-name').value = loc.name;
-      document.getElementById('input-loc-type').value = loc.type || 'New Car Dealership';
+      
+      if (!tax.locationTypes.includes(loc.type)) {
+        tax.locationTypes.push(loc.type);
+      }
+      populateLocTypeSelect(loc.type);
       document.getElementById('input-loc-address').value = loc.address || '';
       
       const cadenceSelect = document.getElementById('input-loc-cadence');
@@ -2124,7 +3278,7 @@
       }
 
       document.getElementById('input-loc-date').value = loc.lastVisitDate || new Date().toISOString().split('T')[0];
-      document.getElementById('modal-location-title').textContent = 'Edit Store Details';
+      document.getElementById('modal-location-title').textContent = `Edit ${tax.locationLabel} Details`;
 
       const delBtn = document.getElementById('btn-delete-location');
       if (delBtn) delBtn.classList.remove('hidden');
@@ -2235,7 +3389,11 @@
       if (!emp) return;
       document.getElementById('input-member-edit-id').value = emp.id;
       document.getElementById('input-member-name').value = emp.name;
-      document.getElementById('input-member-role').value = emp.role;
+      const tax = getTaxonomy();
+      if (!tax.memberRoles.includes(emp.role)) {
+        tax.memberRoles.push(emp.role);
+      }
+      populateMemberRoleSelect(emp.role);
       document.getElementById('input-member-goal').value = emp.goal;
       document.getElementById('modal-member-title').textContent = 'Edit Coaching Profile';
       openModal('modal-add-member');
@@ -3141,6 +4299,9 @@
 
       const selectedId = locId || storeSelect?.value || locs[0]?.id;
 
+      populateVlogTypeSelect();
+      document.getElementById('wrapper-custom-vlogtype-inline')?.classList.add('hidden');
+
       const dateInput = document.getElementById('input-vlog-date');
       if (dateInput) {
         dateInput.value = new Date().toISOString().split('T')[0];
@@ -3432,12 +4593,29 @@
     window.setContentProjectViewMode = setContentProjectViewMode;
 
     const CONTENT_STAGES = [
-      { id: 'backlog', label: 'Concept / Backlog', icon: 'lightbulb', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-      { id: 'scripting', label: 'Scripting & Outline', icon: 'file-text', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
-      { id: 'production', label: 'Filming / Production', icon: 'video', color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200' },
-      { id: 'review', label: 'Review & Editing', icon: 'search', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200' },
-      { id: 'published', label: 'Published & Live', icon: 'check-circle-2', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' }
+      { id: 'backlog', label: 'Backlog', icon: 'layers', color: 'text-amber-800', bg: 'bg-amber-50 border-amber-200' },
+      { id: 'storyboard', label: 'Storyboard', icon: 'layout', color: 'text-blue-800', bg: 'bg-blue-50 border-blue-200' },
+      { id: 'production', label: 'Production', icon: 'video', color: 'text-purple-800', bg: 'bg-purple-50 border-purple-200' },
+      { id: 'review', label: 'Review & Editing', icon: 'search', color: 'text-orange-800', bg: 'bg-orange-50 border-orange-200' },
+      { id: 'complete', label: 'Complete', icon: 'check-circle-2', color: 'text-emerald-800', bg: 'bg-emerald-50 border-emerald-200' }
     ];
+
+    function normalizeContentStage(stage) {
+      if (!stage) return 'backlog';
+      const s = String(stage).toLowerCase().trim();
+      if (s === 'scripting' || s === 'storyboard') return 'storyboard';
+      if (s === 'published' || s === 'complete' || s === 'live') return 'complete';
+      if (s === 'review' || s.includes('review') || s.includes('editing')) return 'review';
+      if (s === 'production' || s === 'filming') return 'production';
+      if (s === 'backlog' || s === 'concept') return 'backlog';
+      return s;
+    }
+
+    function getContentStageLabel(stageId) {
+      const norm = normalizeContentStage(stageId);
+      const found = CONTENT_STAGES.find(s => s.id === norm);
+      return found ? found.label : (stageId || 'Backlog');
+    }
 
     function getContentFormatIcon(format) {
       switch (format) {
@@ -3470,9 +4648,12 @@
       const selStore = document.getElementById('filter-content-store')?.value || 'all';
 
       // Top Metrics computation
-      const activeProjects = projects.filter(p => p.stage !== 'published');
-      const inProdProjects = projects.filter(p => p.stage === 'production' || p.stage === 'review');
-      const publishedProjects = projects.filter(p => p.stage === 'published');
+      const activeProjects = projects.filter(p => normalizeContentStage(p.stage) !== 'complete');
+      const inProdProjects = projects.filter(p => {
+        const st = normalizeContentStage(p.stage);
+        return st === 'production' || st === 'review';
+      });
+      const completeProjects = projects.filter(p => normalizeContentStage(p.stage) === 'complete');
 
       let totalMilestones = 0;
       let completedMilestones = 0;
@@ -3489,7 +4670,7 @@
       const statInProd = document.getElementById('stat-content-in-prod');
       if (statInProd) statInProd.textContent = `${inProdProjects.length} Projects`;
       const statPublished = document.getElementById('stat-content-published');
-      if (statPublished) statPublished.textContent = `${publishedProjects.length} Published`;
+      if (statPublished) statPublished.textContent = `${completeProjects.length} Complete`;
       const statProgress = document.getElementById('stat-content-progress');
       if (statProgress) statProgress.textContent = `${progressPercent}%`;
 
@@ -3506,7 +4687,7 @@
       const kanbanContainer = document.getElementById('content-kanban-view');
       if (kanbanContainer) {
         kanbanContainer.innerHTML = CONTENT_STAGES.map(stage => {
-          const colProjects = filtered.filter(p => p.stage === stage.id);
+          const colProjects = filtered.filter(p => normalizeContentStage(p.stage) === stage.id);
 
           return `
             <div class="bg-cadence-canvas/70 border border-cadence-border rounded-xl p-3.5 space-y-3 min-h-[460px] flex flex-col">
@@ -3530,6 +4711,7 @@
                   const formatIcon = getContentFormatIcon(p.format);
                   const storeObj = locs.find(l => l.id === p.targetStore);
                   const storeLabel = p.targetStore === 'all' ? 'All Stores' : (storeObj ? storeObj.name : 'Store');
+                  const normSt = normalizeContentStage(p.stage);
 
                   const prioBadge = p.priority === 'High' 
                     ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">High</span>' 
@@ -3579,8 +4761,8 @@
 
                         <div class="flex items-center gap-1">
                           <!-- Quick Move dropdown -->
-                          <select onchange="moveProjectStage('${p.id}', this.value)" class="text-[10px] bg-cadence-canvas border border-cadence-border rounded px-1 py-0.5 text-cadence-charcoal focus:outline-none cursor-pointer">
-                            ${CONTENT_STAGES.map(s => `<option value="${s.id}" ${s.id === p.stage ? 'selected' : ''}>${s.label.split(' ')[0]}</option>`).join('')}
+                          <select onchange="moveProjectStage('${p.id}', this.value)" class="text-[10px] bg-cadence-canvas border border-cadence-border rounded px-1.5 py-0.5 text-cadence-charcoal focus:outline-none cursor-pointer font-medium">
+                            ${CONTENT_STAGES.map(s => `<option value="${s.id}" ${s.id === normSt ? 'selected' : ''}>${s.label}</option>`).join('')}
                           </select>
                           <button onclick="openContentProjectModal('${p.id}')" title="Edit Project" class="p-1 hover:text-cadence-charcoal cursor-pointer">
                             <i data-lucide="edit-3" class="w-3 h-3"></i>
@@ -3617,7 +4799,8 @@
             const mDone = (p.milestones || []).filter(m => m.done).length;
             const mPct = mCount > 0 ? Math.round((mDone / mCount) * 100) : 0;
             const formatIcon = getContentFormatIcon(p.format);
-            const stageObj = CONTENT_STAGES.find(s => s.id === p.stage) || CONTENT_STAGES[0];
+            const normSt = normalizeContentStage(p.stage);
+            const stageObj = CONTENT_STAGES.find(s => s.id === normSt) || CONTENT_STAGES[0];
             const storeObj = locs.find(l => l.id === p.targetStore);
             const storeLabel = p.targetStore === 'all' ? 'All Stores' : (storeObj ? storeObj.name : 'Store');
 
@@ -3639,7 +4822,7 @@
                 </td>
                 <td class="py-3 px-3 whitespace-nowrap">
                   <select onchange="moveProjectStage('${p.id}', this.value)" class="text-[10px] font-semibold px-2 py-1 rounded border ${stageObj.bg} ${stageObj.color} focus:outline-none cursor-pointer">
-                    ${CONTENT_STAGES.map(s => `<option value="${s.id}" ${s.id === p.stage ? 'selected' : ''}>${s.label}</option>`).join('')}
+                    ${CONTENT_STAGES.map(s => `<option value="${s.id}" ${s.id === normSt ? 'selected' : ''}>${s.label}</option>`).join('')}
                   </select>
                 </td>
                 <td class="py-3 px-3 min-w-[120px]">
@@ -3703,7 +4886,7 @@
         titleInput.value = p.title || '';
         formatInput.value = p.format || 'Micro-Video Series';
         audienceInput.value = p.audience || 'Sales Specialists';
-        stageInput.value = p.stage || 'backlog';
+        stageInput.value = normalizeContentStage(p.stage || 'backlog');
         priorityInput.value = p.priority || 'Medium';
         storeSelect.value = p.targetStore || 'all';
         dateInput.value = p.targetDate || '';
@@ -3722,7 +4905,7 @@
         titleInput.value = '';
         formatInput.value = 'Micro-Video Series';
         audienceInput.value = 'Sales Specialists';
-        stageInput.value = defaultStage;
+        stageInput.value = normalizeContentStage(defaultStage || 'backlog');
         priorityInput.value = 'Medium';
         storeSelect.value = 'all';
         dateInput.value = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
@@ -3766,7 +4949,7 @@
       const title = document.getElementById('input-cp-name').value.trim();
       const format = document.getElementById('input-cp-format').value;
       const audience = document.getElementById('input-cp-audience').value;
-      const stage = document.getElementById('input-cp-stage').value;
+      const stage = normalizeContentStage(document.getElementById('input-cp-stage').value);
       const priority = document.getElementById('input-cp-priority').value;
       const targetStore = document.getElementById('input-cp-store').value;
       const targetDate = document.getElementById('input-cp-date').value;
@@ -3829,6 +5012,7 @@
       closeModal('modal-content-project');
       window.saveState();
       renderContentProjects();
+      renderOverview();
 
       showWorkspaceToast('Content Project Saved', `"${title}" has been saved.`);
     }
@@ -3839,12 +5023,18 @@
       const p = (state.contentProjects || []).find(proj => proj.id === projectId);
       if (!p) return;
 
-      p.stage = newStage;
+      const normStage = normalizeContentStage(newStage);
+      p.stage = normStage;
       window.saveState();
       renderContentProjects();
+      renderOverview();
 
-      if (newStage === 'published') {
-        showWorkspaceToast('Module Published!', `"${p.title}" is now published and active across store teams.`);
+      const stageObj = CONTENT_STAGES.find(s => s.id === normStage);
+      const stageName = stageObj ? stageObj.label : normStage;
+      if (normStage === 'complete') {
+        showWorkspaceToast('Module Complete!', `"${p.title}" is marked Complete and active across teams.`);
+      } else {
+        showWorkspaceToast('Stage Updated', `"${p.title}" moved to ${stageName}.`);
       }
     }
     window.moveProjectStage = moveProjectStage;
@@ -3868,6 +5058,7 @@
       closeModal('modal-content-project');
       window.saveState();
       renderContentProjects();
+      renderOverview();
       showWorkspaceToast('Project Deleted', `"${p.title}" has been removed.`);
     }
     window.deleteContentProject = deleteContentProject;
@@ -3924,7 +5115,7 @@
           p.title || '',
           p.format || '',
           p.audience || '',
-          p.stage || 'backlog',
+          getContentStageLabel(p.stage),
           p.priority || 'Medium',
           storeLabel,
           p.targetDate || 'N/A',
@@ -4001,7 +5192,7 @@
         `==================================================`,
         `Format: ${p.format}`,
         `Target Audience: ${p.audience}`,
-        `Current Stage: ${p.stage.toUpperCase()}`,
+        `Current Stage: ${getContentStageLabel(p.stage).toUpperCase()}`,
         `Priority Level: ${p.priority}`,
         `Store Scope: ${storeScope}`,
         `Target Release Date: ${p.targetDate || 'TBD'}`,
@@ -4172,8 +5363,8 @@
       // 5. Training Content Creation Projects
       const contentSummary = {
         totalProjects: contentProjects.length,
-        activeProjectsCount: contentProjects.filter(p => p.stage !== 'published').length,
-        publishedCount: contentProjects.filter(p => p.stage === 'published').length,
+        activeProjectsCount: contentProjects.filter(p => normalizeContentStage(p.stage) !== 'complete').length,
+        completeCount: contentProjects.filter(p => normalizeContentStage(p.stage) === 'complete').length,
         projectsList: contentProjects.map(p => {
           const mCount = (p.milestones || []).length;
           const mDone = (p.milestones || []).filter(m => m.done).length;
@@ -4184,7 +5375,7 @@
             title: p.title,
             format: p.format,
             audience: p.audience,
-            stage: p.stage,
+            stage: getContentStageLabel(p.stage),
             priority: p.priority,
             targetStore: p.targetStore === 'all' ? 'All Stores' : (loc ? loc.name : 'Store'),
             targetDate: p.targetDate,
@@ -4197,6 +5388,7 @@
 
       return {
         today: todayStr,
+        industryTaxonomy: getTaxonomy(),
         stores: storesSummary,
         team: teamSummary,
         tasks: tasksSummary,
